@@ -34,6 +34,10 @@ export default function TemaPage() {
   const [gerandoFlash, setGerandoFlash] = useState<Record<number, boolean>>({});
   const [virados, setVirados] = useState<Record<string, boolean>>({});
   const [verCronograma, setVerCronograma] = useState(false);
+  const [quizzes, setQuizzes] = useState<Record<number, any[]>>({});
+  const [gerandoQuiz, setGerandoQuiz] = useState<Record<number, boolean>>({});
+  const [respostas, setRespostas] = useState<Record<string, number>>({});
+  const [corrigido, setCorrigido] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     carregar();
@@ -112,6 +116,31 @@ export default function TemaPage() {
     }
   }
 
+  async function gerarQuiz(i: number) {
+    setGerandoQuiz((p) => ({ ...p, [i]: true }));
+    setCorrigido((p) => ({ ...p, [i]: false }));
+    try {
+      const t = roteiro.topicos[i];
+      const res = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titulo: t.titulo, descricao: t.descricao }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erro ?? "Erro ao gerar quiz");
+      setQuizzes((p) => ({ ...p, [i]: data.perguntas }));
+      setRespostas((p) => {
+        const n = { ...p };
+        (data.perguntas ?? []).forEach((_: any, qi: number) => delete n[`${i}-${qi}`]);
+        return n;
+      });
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setGerandoQuiz((p) => ({ ...p, [i]: false }));
+    }
+  }
+
   if (!roteiro) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -119,7 +148,6 @@ export default function TemaPage() {
       </main>
     );
   }
-
   const progresso = Math.round((concluidos.filter(Boolean).length / concluidos.length) * 100);
   const cron = calcularCronograma(roteiro);
 
@@ -331,6 +359,85 @@ export default function TemaPage() {
                       );
                     })}
                   </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">❓ Quiz</h3>
+                    <button
+                      onClick={() => gerarQuiz(i)}
+                      disabled={gerandoQuiz[i]}
+                      className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {gerandoQuiz[i] ? "Gerando..." : quizzes[i]?.length ? "Novo quiz" : "Gerar quiz"}
+                    </button>
+                  </div>
+
+                  {(quizzes[i] ?? []).map((q: any, qi: number) => {
+                    const chave = `${i}-${qi}`;
+                    const resp = respostas[chave];
+                    const mostrando = corrigido[i];
+                    const acertou = mostrando && resp === q.correta;
+                    return (
+                      <div key={qi} className="mb-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                        <p className="mb-2 font-medium">
+                          {qi + 1}. {q.pergunta}
+                        </p>
+                        <div className="space-y-1">
+                          {q.opcoes.map((op: string, oi: number) => {
+                            let cor = "border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800";
+                            if (mostrando && oi === q.correta)
+                              cor = "border-green-400 bg-green-50 dark:bg-green-900/30 dark:border-green-700";
+                            else if (mostrando && oi === resp && oi !== q.correta)
+                              cor = "border-red-400 bg-red-50 dark:bg-red-900/30 dark:border-red-700";
+                            return (
+                              <button
+                                key={oi}
+                                disabled={mostrando}
+                                onClick={() => setRespostas((p) => ({ ...p, [chave]: oi }))}
+                                className={`flex w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-left ${cor} ${
+                                  resp === oi && !mostrando ? "border-blue-500 dark:border-blue-500" : ""
+                                }`}
+                              >
+                                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                  {String.fromCharCode(65 + oi)}
+                                </span>
+                                {op}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {mostrando && (
+                          <p className={`mt-2 text-xs ${acertou ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                            {acertou ? "✅ Correto! " : "❌ Incorreto. "}
+                            {q.explicacao}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {quizzes[i]?.length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setCorrigido((p) => ({ ...p, [i]: true }))}
+                        disabled={corrigido[i]}
+                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+                      >
+                        Corrigir
+                      </button>
+                      {corrigido[i] && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Acertos:{" "}
+                          {
+                            quizzes[i].filter((q: any, qi: number) => respostas[`${i}-${qi}`] === q.correta)
+                              .length
+                          }
+                          /{quizzes[i].length}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

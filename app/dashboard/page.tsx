@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
+import { estaVencido } from "@/lib/revisao";
 import ThemeToggle from "@/components/ThemeToggle";
 import BottomNav from "@/components/BottomNav";
 
@@ -83,11 +84,36 @@ export default function Dashboard() {
     router.replace("/login");
   }
 
+  const revisoesPendentes = roteiros.reduce(
+    (acc, r) =>
+      acc +
+      (r.topicos ?? []).reduce(
+        (a: number, t: any) =>
+          a +
+          (t.flashcards ?? []).filter((f: any) =>
+            estaVencido({
+              ease: f.ease ?? 2.5,
+              intervalo: f.intervalo ?? 0,
+              reps: f.reps ?? 0,
+              proxima: f.proxima ?? null,
+            })
+          ).length,
+        0
+      ),
+    0
+  );
+
   return (
     <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold">📚 Meus estudos</h1>
         <div className="flex items-center gap-2">
+          <Link
+            href="/revisao"
+            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
+          >
+            🔁 Revisar
+          </Link>
           <Link
             href="/estatisticas"
             className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
@@ -100,6 +126,18 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
+
+      {revisoesPendentes > 0 && (
+        <Link
+          href="/revisao"
+          className="mb-6 flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/30 dark:hover:bg-purple-900/50"
+        >
+          <span className="font-medium text-purple-800 dark:text-purple-200">
+            🔁 {revisoesPendentes} {revisoesPendentes === 1 ? "card" : "cards"} para revisar hoje
+          </span>
+          <span className="text-purple-700 dark:text-purple-300">Revisar →</span>
+        </Link>
+      )}
 
       <form onSubmit={criar} id="novo" className="mb-8 rounded-2xl bg-white p-6 shadow dark:border dark:border-slate-800 dark:bg-slate-900">
         <label className="mb-2 block font-medium">Sobre o que você quer estudar?</label>

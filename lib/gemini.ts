@@ -114,3 +114,27 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
   const resultado = await chamarGemini(prompt);
   return resultado?.flashcards ?? [];
 }
+
+export async function gerarQuiz(titulo: string, descricao: string) {
+  const prompt = `Você é um professor. Crie um quiz de 4 perguntas de múltipla escolha sobre o tópico "${titulo}".
+Contexto do tópico: ${descricao}
+
+Cada pergunta deve ter 4 alternativas, sendo apenas uma correta.
+
+Responda APENAS com um JSON válido, sem texto fora dele, no formato:
+{
+  "perguntas": [
+    {
+      "pergunta": "texto da pergunta",
+      "opcoes": ["alternativa A", "alternativa B", "alternativa C", "alternativa D"],
+      "correta": 0,
+      "explicacao": "por que essa alternativa é a correta"
+    }
+  ]
+}
+
+O campo "correta" é o índice (0 a 3) da alternativa certa.`;
+
+  const resultado = await chamarGemini(prompt);
+  return resultado?.perguntas ?? [];
+}

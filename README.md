@@ -11,8 +11,15 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 📖 Busca automática de livros (Google Books API)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
+- 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
 - 📝 Anotações pessoais por tópico
 - 🃏 Flashcards de revisão gerados por IA
+- 🔁 Revisão espaçada (SM-2) — os cards voltam no intervalo ideal
+- ⏱ Cronômetro de estudo e Pomodoro (25/5)
+- 📊 Estatísticas: tempo estudado, sequência de dias (streak) e gráfico de 7 dias
+- ❓ Quiz de múltipla escolha gerado por IA
+- 🌙 Tema claro/escuro
+- 📱 Layout adaptado para celular
 
 ## 🛠️ Tecnologias
 
@@ -35,7 +42,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ### 2. Configurar o banco no Supabase
 No painel do Supabase, abra **SQL Editor > New query**, cole o conteúdo de
 `supabase-setup.sql` e clique em **Run**.
-Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql`.
+Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql`
+(prazo) e `supabase-migration-3.sql` (sessões de estudo).
 
 ### 3. Instalar e rodar
 ```bash
@@ -70,11 +78,13 @@ git push -u origin main
 
 ```
 study-planner/
-├── app/                    # páginas (login, dashboard, tema)
-│   └── api/                # rotas: gemini, youtube, books, flashcards
-├── lib/                    # supabase, gemini, youtube, googlebooks, prazo
-├── supabase-setup.sql      # criação da tabela
+├── app/                    # páginas (login, dashboard, tema, revisao, estatisticas)
+│   └── api/                # rotas: gemini, youtube, books, flashcards, quiz
+├── components/             # ThemeToggle, BottomNav, Cronometro
+├── lib/                    # supabase, gemini, youtube, googlebooks, prazo, cronograma, revisao
+├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)
+├── supabase-migration-3.sql# migração (sessões de estudo)
 ├── .env.example            # modelo das variáveis
 └── .env.local              # suas chaves (NÃO vai pro Git)
 ```
