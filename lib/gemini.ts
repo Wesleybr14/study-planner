@@ -16,7 +16,8 @@ function sleep(ms: number) {
 }
 
 async function chamarGemini(prompt: string): Promise<any> {
-  if (!GEMINI_KEY) throw new Error("GEMINI_API_KEY não configurada no .env.local");
+  if (!GEMINI_KEY)
+    throw new Error("GEMINI_API_KEY não configurada no .env.local");
 
   const corpo = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
@@ -33,7 +34,10 @@ async function chamarGemini(prompt: string): Promise<any> {
       try {
         res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_KEY,
+          },
           body: corpo,
         });
       } catch (e: any) {
@@ -53,9 +57,10 @@ async function chamarGemini(prompt: string): Promise<any> {
 
       // 503/429 = servidor sobrecarregado ou limite de uso -> tenta de novo
       if (res.status === 503 || res.status === 429) {
-        ultimoErro = res.status === 429
-          ? "Limite de uso gratuito atingido. Aguarde um minuto e tente novamente."
-          : "O serviço da IA está sobrecarregado no momento.";
+        ultimoErro =
+          res.status === 429
+            ? "Limite de uso gratuito atingido. Aguarde um minuto e tente novamente."
+            : "O serviço da IA está sobrecarregado no momento.";
         await sleep(tentativa * 2000);
         continue;
       }
@@ -88,7 +93,8 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
       "descricao": "o que se estuda neste tópico",
       "duracaoEstimada": "ex: 4 horas",
       "buscaVideos": "termo curto de busca para youtube",
-      "buscaLivros": "titulo de um livro conhecido sobre o topico, de preferencia em ingles (o acervo gratuito e maior)"
+      "buscaLivros": "titulo de um livro conhecido sobre o topico, de preferencia em ingles (o acervo gratuito e maior)",
+      "buscaArtigos": "termo de busca em ingles (2 a 4 palavras) para artigos cientificos sobre o topico"
     }
   ]
 }
@@ -100,7 +106,7 @@ Crie entre 6 e 10 tópicos, do básico ao avançado, em ordem lógica de aprendi
 
 export async function gerarBuscas(titulos: string[]) {
   const lista = titulos.map((t, i) => `${i + 1}. ${t}`).join("\n");
-  const prompt = `Você é um professor. Para cada tópico abaixo, gere um termo curto de busca para YouTube (buscaVideos) e o título de um livro conhecido sobre o tópico (buscaLivros), de preferência em inglês porque há mais acervo gratuito.
+  const prompt = `Você é um professor. Para cada tópico abaixo, gere um termo curto de busca para YouTube (buscaVideos), o título de um livro conhecido sobre o tópico (buscaLivros) e um termo de busca em inglês para artigos científicos (buscaArtigos). Use inglês nos livros e artigos porque há mais acervo gratuito.
 
 Tópicos:
 ${lista}
@@ -108,7 +114,7 @@ ${lista}
 Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 {
   "buscas": [
-    { "buscaVideos": "termo curto para o youtube", "buscaLivros": "titulo de um livro conhecido, de preferencia em ingles" }
+    { "buscaVideos": "termo curto para o youtube", "buscaLivros": "titulo de um livro conhecido, de preferencia em ingles", "buscaArtigos": "termo em ingles (2 a 4 palavras) para artigos cientificos" }
   ]
 }
 

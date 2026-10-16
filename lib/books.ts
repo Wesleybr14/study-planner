@@ -13,9 +13,16 @@ export type Livro = {
   acesso: Acesso;
   pdf: string | null; // link direto de download em PDF, quando disponível
   fonte: "openlibrary" | "google";
+  ia?: string; // identificador no Internet Archive (para leitura embutida)
+  googleId?: string; // id do volume no Google Books (para preview embutido)
 };
 
-const PESO: Record<Acesso, number> = { pdf: 0, online: 1, emprestimo: 2, pago: 3 };
+const PESO: Record<Acesso, number> = {
+  pdf: 0,
+  online: 1,
+  emprestimo: 2,
+  pago: 3,
+};
 
 // ---------- Open Library ----------
 
@@ -31,7 +38,7 @@ type OLDoc = {
 // Descobre o arquivo PDF real de um item do Internet Archive.
 // Nem sempre o nome segue "{id}.pdf" (ex.: itens enviados manualmente).
 async function resolverArquivoPublico(
-  ia: string
+  ia: string,
 ): Promise<{ pdf: string | null; url: string; acesso: Acesso }> {
   const detalhes = `https://archive.org/details/${ia}`;
   try {
@@ -48,7 +55,9 @@ async function resolverArquivoPublico(
     const files: { name?: string }[] = m?.files ?? [];
     const exato = files.find((f) => f.name === `${ia}.pdf`);
     const generico = files.find(
-      (f) => /\.pdf$/i.test(f.name ?? "") && !/(_encrypted|_bw|_lcp)/i.test(f.name ?? "")
+      (f) =>
+        /\.pdf$/i.test(f.name ?? "") &&
+        !/(_encrypted|_bw|_lcp)/i.test(f.name ?? ""),
     );
     const arquivo = exato ?? generico;
 
@@ -65,13 +74,16 @@ async function resolverArquivoPublico(
   }
 }
 
-async function buscarOpenLibrary(consulta: string, max: number): Promise<Livro[]> {
+async function buscarOpenLibrary(
+  consulta: string,
+  max: number,
+): Promise<Livro[]> {
   const url = new URL("https://openlibrary.org/search.json");
   url.searchParams.set("q", consulta);
   url.searchParams.set("limit", String(Math.max(max * 3, 8)));
   url.searchParams.set(
     "fields",
-    "title,author_name,cover_i,key,ia,ebook_access,public_scan_b"
+    "title,author_name,cover_i,key,ia,ebook_access,public_scan_b",
   );
 
   const res = await fetch(url.toString());
@@ -83,9 +95,13 @@ async function buscarOpenLibrary(consulta: string, max: number): Promise<Livro[]
 
   const livros = await Promise.all(
     docs.map(async (d): Promise<Livro> => {
-      const capa = d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null;
+      const capa = d.cover_i
+        ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`
+        : null;
       const ia = (d.ia ?? [])[0];
-      const paginaOL = d.key ? `https://openlibrary.org${d.key}` : "https://openlibrary.org";
+      const paginaOL = d.key
+        ? `https://openlibrary.org${d.key}`
+        : "https://openlibrary.org";
 
       let acesso: Acesso = "pago";
       let pdf: string | null = null;
@@ -118,8 +134,9 @@ async function buscarOpenLibrary(consulta: string, max: number): Promise<Livro[]
         acesso,
         pdf,
         fonte: "openlibrary" as const,
+        ia,
       };
-    })
+    }),
   );
 
   return livros;
@@ -127,12 +144,12 @@ async function buscarOpenLibrary(consulta: string, max: number): Promise<Livro[]
 
 // ---------- Google Books ----------
 
-type GBItem = { volumeInfo?: any; accessInfo?: any };
+type GBItem = { id?: string; volumeInfo?: any; accessInfo?: any };
 
 async function buscarGoogle(
   consulta: string,
   max: number,
-  comChave: boolean
+  comChave: boolean,
 ): Promise<Livro[]> {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const url = new URL("https://www.googleapis.com/books/v1/volumes");
@@ -154,7 +171,11 @@ async function buscarGoogle(
     if (ai.pdf?.downloadLink) {
       acesso = "pdf";
       pdf = ai.pdf.downloadLink;
-    } else if (ai.viewability === "ALL_PAGES" || ai.pdf?.isAvailable || ai.epub?.isAvailable) {
+    } else if (
+      ai.viewability === "ALL_PAGES" ||
+      ai.pdf?.isAvailable ||
+      ai.epub?.isAvailable
+    ) {
       acesso = "online";
     }
 
@@ -168,6 +189,7 @@ async function buscarGoogle(
       acesso,
       pdf,
       fonte: "google" as const,
+      googleId: it.id,
     };
   });
 }
@@ -175,7 +197,10 @@ async function buscarGoogle(
 // ---------- Combinação ----------
 
 function chaveDedupe(l: Livro): string {
-  return l.titulo.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
+  return l.titulo
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 30);
 }
 
 function deduplicar(livros: Livro[]): Livro[] {
@@ -193,12 +218,14 @@ function deduplicar(livros: Livro[]): Livro[] {
 export async function buscarLivros(
   consulta: string,
   max = 4,
-  apenasGratis = false
+  apenasGratis = false,
 ): Promise<Livro[]> {
   const [ol, gb] = await Promise.allSettled([
     buscarOpenLibrary(consulta, max),
     // Google Books é instável: tenta com a chave e, se falhar, sem chave.
-    buscarGoogle(consulta, max, true).catch(() => buscarGoogle(consulta, max, false)),
+    buscarGoogle(consulta, max, true).catch(() =>
+      buscarGoogle(consulta, max, false),
+    ),
   ]);
 
   let todos: Livro[] = [];

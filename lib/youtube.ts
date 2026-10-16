@@ -19,5 +19,6 @@ export async function buscarVideos(consulta: string, max = 3) {
     canal: item.snippet.channelTitle,
     thumbnail: item.snippet.thumbnails?.medium?.url,
     url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+    videoId: item.id.videoId,
   }));
 }

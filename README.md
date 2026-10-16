@@ -7,10 +7,12 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 
 - 🔐 Cadastro e login (Supabase)
 - 🤖 Roteiro de estudo gerado por IA (Google Gemini), do básico ao avançado
-- 🎬 Busca automática de vídeos (YouTube Data API)
-- 📖 Livros automáticos via Open Library (confiável, sem chave) + Google Books
+- 🎬 Busca automática de vídeos (YouTube Data API), assistíveis **na própria página**
+- 📖 Livros automáticos via Open Library (confiável, sem chave) + Google Books, com **leitor embutido**
 - 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
-- 🔄 Botão para regenerar as buscas de vídeos/livros de um roteiro (útil para roteiros antigos)
+- 🔬 Artigos científicos gratuitos (arXiv, Europe PMC, DOAJ) com resumo e PDF
+- 🗂️ **Painel lateral por tópico**: reúne vídeos, livros, artigos, anotações, flashcards e quiz sem sair da página
+- 🔄 Botão para regenerar as buscas de vídeos/livros/artigos de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
 - 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
@@ -30,11 +32,14 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - **Google Gemini** — geração de roteiros, flashcards e quiz
 - **YouTube Data API** — vídeos
 - **Open Library / Internet Archive** + **Google Books API** — livros (Open Library não exige chave)
+- **arXiv**, **Europe PMC** e **DOAJ** — artigos científicos de acesso aberto (sem chave de API)
 
 ## 🚀 Como rodar localmente
 
 ### 1. Configurar as chaves de API
+
 Copie `.env.example` para `.env.local` e preencha:
+
 ```
 GEMINI_API_KEY=...
 YOUTUBE_API_KEY=...
@@ -43,16 +48,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
 ### 2. Configurar o banco no Supabase
+
 No painel do Supabase, abra **SQL Editor > New query**, cole o conteúdo de
 `supabase-setup.sql` e clique em **Run**.
 Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql`
 (prazo) e `supabase-migration-3.sql` (sessões de estudo).
 
 ### 3. Instalar e rodar
+
 ```bash
 npm install
 npm run dev
 ```
+
 Abra http://localhost:3000
 
 ## ☁️ Publicar na Vercel
@@ -82,9 +90,9 @@ git push -u origin main
 ```
 study-planner/
 ├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
-│   └── api/                # rotas: gemini, youtube, books, flashcards, quiz
-├── components/             # AppShell, BottomNav, ThemeToggle, Cronometro
-├── lib/                    # supabase, gemini, youtube, books, prazo, cronograma, revisao
+│   └── api/                # rotas: gemini, youtube, books, artigos, flashcards, quiz
+├── components/             # AppShell, TopicoDrawer, BottomNav, ThemeToggle, Cronometro
+├── lib/                    # supabase, gemini, youtube, books, artigos, prazo, cronograma, revisao
 ├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)
 ├── supabase-migration-3.sql# migração (sessões de estudo)
