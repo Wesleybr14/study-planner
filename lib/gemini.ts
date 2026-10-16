@@ -88,7 +88,7 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
       "descricao": "o que se estuda neste tópico",
       "duracaoEstimada": "ex: 4 horas",
       "buscaVideos": "termo curto de busca para youtube",
-      "buscaLivros": "termo curto de busca para livros"
+      "buscaLivros": "titulo de um livro conhecido sobre o topico, de preferencia em ingles (o acervo gratuito e maior)"
     }
   ]
 }

@@ -8,7 +8,8 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 🔐 Cadastro e login (Supabase)
 - 🤖 Roteiro de estudo gerado por IA (Google Gemini), do básico ao avançado
 - 🎬 Busca automática de vídeos (YouTube Data API)
-- 📖 Busca automática de livros (Google Books API)
+- 📖 Livros automáticos via Open Library (confiável, sem chave) + Google Books
+- 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
 - 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
@@ -25,8 +26,9 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 
 - **Next.js 16** + TypeScript + Tailwind CSS
 - **Supabase** — login e banco de dados (PostgreSQL)
-- **Google Gemini** — geração de roteiros e flashcards
-- **YouTube Data API** + **Google Books API** — recursos
+- **Google Gemini** — geração de roteiros, flashcards e quiz
+- **YouTube Data API** — vídeos
+- **Open Library / Internet Archive** + **Google Books API** — livros (Open Library não exige chave)
 
 ## 🚀 Como rodar localmente
 
@@ -81,7 +83,7 @@ study-planner/
 ├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
 │   └── api/                # rotas: gemini, youtube, books, flashcards, quiz
 ├── components/             # ThemeToggle, BottomNav, Cronometro
-├── lib/                    # supabase, gemini, youtube, googlebooks, prazo, cronograma, revisao
+├── lib/                    # supabase, gemini, youtube, books, prazo, cronograma, revisao
 ├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)
 ├── supabase-migration-3.sql# migração (sessões de estudo)
