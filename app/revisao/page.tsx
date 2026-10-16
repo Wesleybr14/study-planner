@@ -4,9 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import ThemeToggle from "@/components/ThemeToggle";
-import BottomNav from "@/components/BottomNav";
-import { estaVencido, revisar, textoIntervalo, type EstadoRevisao, type Qualidade } from "@/lib/revisao";
+import AppShell from "@/components/AppShell";
+import {
+  estaVencido,
+  revisar,
+  textoIntervalo,
+  type EstadoRevisao,
+  type Qualidade,
+} from "@/lib/revisao";
 
 type CardRef = {
   roteiroId: string;
@@ -27,7 +32,10 @@ export default function Revisao() {
   const [pos, setPos] = useState(0);
   const [mostrar, setMostrar] = useState(false);
   const [feitas, setFeitas] = useState(0);
-  const [ultimo, setUltimo] = useState<{ qualidade: Qualidade; intervalo: number } | null>(null);
+  const [ultimo, setUltimo] = useState<{
+    qualidade: Qualidade;
+    intervalo: number;
+  } | null>(null);
 
   useEffect(() => {
     carregar();
@@ -79,14 +87,19 @@ export default function Revisao() {
         ? {
             ...t,
             flashcards: t.flashcards.map((f: any, ci: number) =>
-              ci === card.cardIndex ? { ...f, ...novo } : f
+              ci === card.cardIndex ? { ...f, ...novo } : f,
             ),
           }
-        : t
+        : t,
     );
 
-    setRoteiros((prev) => prev.map((r) => (r.id === card.roteiroId ? { ...r, topicos } : r)));
-    await supabase.from("roteiros").update({ topicos }).eq("id", card.roteiroId);
+    setRoteiros((prev) =>
+      prev.map((r) => (r.id === card.roteiroId ? { ...r, topicos } : r)),
+    );
+    await supabase
+      .from("roteiros")
+      .update({ topicos })
+      .eq("id", card.roteiroId);
 
     setUltimo({ qualidade: q, intervalo: novo.intervalo });
     setMostrar(false);
@@ -97,11 +110,10 @@ export default function Revisao() {
   const card = fila[pos];
 
   return (
-    <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
-      <div className="mb-6 flex items-center justify-between">
+    <AppShell largura="foco">
+      <header className="mb-6">
         <h1 className="text-2xl font-bold">🔁 Revisão</h1>
-        <ThemeToggle />
-      </div>
+      </header>
 
       {carregando ? (
         <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
@@ -135,7 +147,9 @@ export default function Revisao() {
           </div>
 
           <div className="rounded-xl bg-white p-6 shadow dark:border dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs text-slate-400 dark:text-slate-500">{card.topicoTitulo}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {card.topicoTitulo}
+            </p>
             <p className="mt-3 text-lg font-medium">{card.frente}</p>
 
             {mostrar ? (
@@ -177,13 +191,12 @@ export default function Revisao() {
 
           {ultimo && (
             <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
-              Próxima revisão {textoIntervalo(ultimo.intervalo)} · {feitas} revisados
+              Próxima revisão {textoIntervalo(ultimo.intervalo)} · {feitas}{" "}
+              revisados
             </p>
           )}
         </>
       )}
-
-      <BottomNav />
-    </main>
+    </AppShell>
   );
 }

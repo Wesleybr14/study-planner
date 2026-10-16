@@ -10,7 +10,7 @@ export default function BottomNav() {
 
   function irParaNovo() {
     if (pathname !== "/dashboard") {
-      router.push("/dashboard");
+      router.push("/dashboard#novo");
     } else {
       document.getElementById("novo")?.scrollIntoView({ behavior: "smooth" });
     }
@@ -38,7 +38,10 @@ export default function BottomNav() {
           <div className="text-lg">🔁</div>
           Revisar
         </Link>
-        <Link href="/estatisticas" className={item(pathname === "/estatisticas")}>
+        <Link
+          href="/estatisticas"
+          className={item(pathname === "/estatisticas")}
+        >
           <div className="text-lg">📊</div>
           Progresso
         </Link>

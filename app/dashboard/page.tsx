@@ -6,8 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
 import { estaVencido } from "@/lib/revisao";
-import ThemeToggle from "@/components/ThemeToggle";
-import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 
 type Roteiro = {
   id: string;
@@ -32,6 +31,17 @@ export default function Dashboard() {
       if (!data.session) router.replace("/login");
     });
     carregarRoteiros();
+
+    // Permite chegar no formulário via /dashboard#novo (ex.: botão "Novo").
+    if (window.location.hash === "#novo") {
+      setTimeout(
+        () =>
+          document
+            .getElementById("novo")
+            ?.scrollIntoView({ behavior: "smooth" }),
+        100,
+      );
+    }
   }, [router]);
 
   async function carregarRoteiros() {
@@ -79,11 +89,6 @@ export default function Dashboard() {
     }
   }
 
-  async function sair() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
   const revisoesPendentes = roteiros.reduce(
     (acc, r) =>
       acc +
@@ -96,41 +101,20 @@ export default function Dashboard() {
               intervalo: f.intervalo ?? 0,
               reps: f.reps ?? 0,
               proxima: f.proxima ?? null,
-            })
+            }),
           ).length,
-        0
+        0,
       ),
-    0
+    0,
   );
 
   return (
-    <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
-      <header className="mb-8 flex items-center justify-between">
+    <AppShell>
+      <header className="mb-6">
         <h1 className="text-2xl font-bold">📚 Meus estudos</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/cronometro"
-            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
-          >
-            ⏱ Foco
-          </Link>
-          <Link
-            href="/revisao"
-            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
-          >
-            🔁 Revisar
-          </Link>
-          <Link
-            href="/estatisticas"
-            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
-          >
-            📊 Estatísticas
-          </Link>
-          <ThemeToggle />
-          <button onClick={sair} className="text-sm text-slate-500 hover:text-red-500 dark:text-slate-400">
-            Sair
-          </button>
-        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Crie roteiros com IA e acompanhe seu progresso.
+        </p>
       </header>
 
       {revisoesPendentes > 0 && (
@@ -139,69 +123,92 @@ export default function Dashboard() {
           className="mb-6 flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/30 dark:hover:bg-purple-900/50"
         >
           <span className="font-medium text-purple-800 dark:text-purple-200">
-            🔁 {revisoesPendentes} {revisoesPendentes === 1 ? "card" : "cards"} para revisar hoje
+            🔁 {revisoesPendentes} {revisoesPendentes === 1 ? "card" : "cards"}{" "}
+            para revisar hoje
           </span>
-          <span className="text-purple-700 dark:text-purple-300">Revisar →</span>
+          <span className="text-purple-700 dark:text-purple-300">
+            Revisar →
+          </span>
         </Link>
       )}
 
-      <form onSubmit={criar} id="novo" className="mb-8 rounded-2xl bg-white p-6 shadow dark:border dark:border-slate-800 dark:bg-slate-900">
-        <label className="mb-2 block font-medium">Sobre o que você quer estudar?</label>
-        <input
-          value={tema}
-          onChange={(e) => setTema(e.target.value)}
-          placeholder="Ex: Inteligência Artificial, Finanças, Inglês..."
-          className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
-        />
-        <div className="mb-3">
-          <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">
-            Meta (opcional) — até quando quer terminar?
+      <div className="grid gap-6 lg:grid-cols-3">
+        <form
+          onSubmit={criar}
+          id="novo"
+          className="h-fit rounded-2xl bg-white p-6 shadow lg:sticky lg:top-6 lg:col-span-1 dark:border dark:border-slate-800 dark:bg-slate-900"
+        >
+          <label className="mb-2 block font-medium">
+            Sobre o que você quer estudar?
           </label>
           <input
-            type="date"
-            value={prazo}
-            onChange={(e) => setPrazo(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            value={tema}
+            onChange={(e) => setTema(e.target.value)}
+            placeholder="Ex: Inteligência Artificial, Finanças, Inglês..."
+            className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
-        </div>
-        <button
-          type="submit"
-          disabled={gerando}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {gerando ? "Gerando..." : "Gerar roteiro"}
-        </button>
-        {gerando && <p className="mt-2 text-sm text-slate-500">A IA está montando seu plano de estudos...</p>}
-        {erro && <p className="mt-2 text-sm text-red-500">{erro}</p>}
-      </form>
-
-      <div className="space-y-3">
-        {roteiros.length === 0 && (
-          <p className="text-center text-slate-400 dark:text-slate-500">Nenhum roteiro ainda. Crie o primeiro acima!</p>
-        )}
-        {roteiros.map((r) => (
+          <div className="mb-3">
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">
+              Meta (opcional) — até quando quer terminar?
+            </label>
+            <input
+              type="date"
+              value={prazo}
+              onChange={(e) => setPrazo(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </div>
           <button
-            key={r.id}
-            onClick={() => router.push(`/tema/${r.id}`)}
-            className="block w-full rounded-xl bg-white p-4 text-left shadow hover:shadow-md dark:border dark:border-slate-800 dark:bg-slate-900"
+            type="submit"
+            disabled={gerando}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">{r.tema}</span>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{r.progresso}%</span>
-            </div>
-            {r.prazo && (
-              <p className={`mt-1 text-xs ${corPrazo(r.prazo)}`}>
-                🎯 {labelPrazo(r.prazo)} · meta {formatarData(r.prazo)}
-              </p>
-            )}
-            <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-              <div className="h-2 rounded-full bg-green-500" style={{ width: `${r.progresso}%` }} />
-            </div>
+            {gerando ? "Gerando..." : "Gerar roteiro"}
           </button>
-        ))}
-      </div>
+          {gerando && (
+            <p className="mt-2 text-sm text-slate-500">
+              A IA está montando seu plano de estudos...
+            </p>
+          )}
+          {erro && <p className="mt-2 text-sm text-red-500">{erro}</p>}
+        </form>
 
-      <BottomNav />
-    </main>
+        <section className="lg:col-span-2">
+          {roteiros.length === 0 ? (
+            <p className="rounded-xl bg-white p-8 text-center text-slate-400 shadow dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
+              Nenhum roteiro ainda. Crie o primeiro ao lado!
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {roteiros.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => router.push(`/tema/${r.id}`)}
+                  className="block w-full rounded-xl bg-white p-4 text-left shadow hover:shadow-md dark:border dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{r.tema}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      {r.progresso}%
+                    </span>
+                  </div>
+                  {r.prazo && (
+                    <p className={`mt-1 text-xs ${corPrazo(r.prazo)}`}>
+                      🎯 {labelPrazo(r.prazo)} · meta {formatarData(r.prazo)}
+                    </p>
+                  )}
+                  <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-2 rounded-full bg-green-500"
+                      style={{ width: `${r.progresso}%` }}
+                    />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </AppShell>
   );
 }

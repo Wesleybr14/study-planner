@@ -21,7 +21,7 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 📊 Estatísticas: tempo estudado, sequência de dias (streak) e gráfico de 7 dias
 - ❓ Quiz de múltipla escolha gerado por IA
 - 🌙 Tema claro/escuro
-- 📱 Layout adaptado para celular
+- 🖥️ Layout responsivo: barra lateral no desktop e navegação inferior no celular
 
 ## 🛠️ Tecnologias
 
@@ -83,7 +83,7 @@ git push -u origin main
 study-planner/
 ├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
 │   └── api/                # rotas: gemini, youtube, books, flashcards, quiz
-├── components/             # ThemeToggle, BottomNav, Cronometro
+├── components/             # AppShell, BottomNav, ThemeToggle, Cronometro
 ├── lib/                    # supabase, gemini, youtube, books, prazo, cronograma, revisao
 ├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)

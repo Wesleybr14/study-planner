@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import ThemeToggle from "@/components/ThemeToggle";
-import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 import Cronometro from "@/components/Cronometro";
 
 export default function Foco() {
@@ -21,7 +20,9 @@ export default function Foco() {
     const { data: auth } = await supabase.auth.getSession();
     if (!auth.session) return router.replace("/login");
 
-    const { data } = await supabase.from("roteiros").select("id, tema, topicos");
+    const { data } = await supabase
+      .from("roteiros")
+      .select("id, tema, topicos");
     setRoteiros(data ?? []);
     setCarregando(false);
   }
@@ -29,11 +30,10 @@ export default function Foco() {
   const [rid, ti] = selecao ? selecao.split(":") : [undefined, undefined];
 
   return (
-    <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
-      <div className="mb-6 flex items-center justify-between">
+    <AppShell largura="foco">
+      <header className="mb-6">
         <h1 className="text-2xl font-bold">⏱ Foco</h1>
-        <ThemeToggle />
-      </div>
+      </header>
 
       {carregando ? (
         <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
@@ -70,8 +70,6 @@ export default function Foco() {
           </p>
         </>
       )}
-
-      <BottomNav />
-    </main>
+    </AppShell>
   );
 }
