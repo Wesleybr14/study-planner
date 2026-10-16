@@ -30,6 +30,10 @@ export default function BottomNav() {
           <div className="text-lg">➕</div>
           Novo
         </button>
+        <Link href="/estatisticas" className={item(pathname === "/estatisticas")}>
+          <div className="text-lg">📊</div>
+          Progresso
+        </Link>
       </div>
     </nav>
   );

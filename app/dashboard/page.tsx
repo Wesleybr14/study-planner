@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -87,6 +88,12 @@ export default function Dashboard() {
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold">📚 Meus estudos</h1>
         <div className="flex items-center gap-2">
+          <Link
+            href="/estatisticas"
+            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
+          >
+            📊 Estatísticas
+          </Link>
           <ThemeToggle />
           <button onClick={sair} className="text-sm text-slate-500 hover:text-red-500 dark:text-slate-400">
             Sair

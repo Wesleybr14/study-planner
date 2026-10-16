@@ -7,6 +7,7 @@ import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
 import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
 import ThemeToggle from "@/components/ThemeToggle";
 import BottomNav from "@/components/BottomNav";
+import Cronometro from "@/components/Cronometro";
 
 type Flashcard = { frente: string; verso: string };
 
@@ -242,6 +243,8 @@ export default function TemaPage() {
 
             {aberto === i && (
               <div className="space-y-4 border-t p-4 dark:border-slate-800">
+                <Cronometro roteiroId={id} topicoIndex={i} />
+
                 <div>
                   <h3 className="mb-2 text-sm font-semibold">🎬 Vídeos</h3>
                   <div className="grid gap-2">
