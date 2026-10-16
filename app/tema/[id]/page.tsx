@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
+import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
 import ThemeToggle from "@/components/ThemeToggle";
 import BottomNav from "@/components/BottomNav";
 
@@ -31,6 +32,7 @@ export default function TemaPage() {
   const [notas, setNotas] = useState<Record<number, string>>({});
   const [gerandoFlash, setGerandoFlash] = useState<Record<number, boolean>>({});
   const [virados, setVirados] = useState<Record<string, boolean>>({});
+  const [verCronograma, setVerCronograma] = useState(false);
 
   useEffect(() => {
     carregar();
@@ -118,6 +120,7 @@ export default function TemaPage() {
   }
 
   const progresso = Math.round((concluidos.filter(Boolean).length / concluidos.length) * 100);
+  const cron = calcularCronograma(roteiro);
 
   return (
     <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
@@ -146,6 +149,68 @@ export default function TemaPage() {
           <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${progresso}%` }} />
         </div>
       </div>
+
+      {cron.concluido ? (
+        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
+          🎉 Parabéns! Você concluiu todos os tópicos.
+        </div>
+      ) : (
+        <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-900/30">
+          <p className="font-semibold">📅 Hoje</p>
+          {cron.hoje.length === 0 ? (
+            <p className="text-sm text-slate-600 dark:text-slate-300">Sem tópicos programados para hoje.</p>
+          ) : (
+            <ul className="mt-1 space-y-1">
+              {cron.hoje.map((it) => (
+                <li key={it.indice} className="text-sm">
+                  📌 {it.titulo} <span className="text-slate-500 dark:text-slate-400">(~{it.horas}h)</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {cron.diasRestantes !== null && (
+            <p
+              className={`mt-2 text-xs ${
+                cron.atrasado
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              {cron.atrasado
+                ? "⚠️ Meta atrasada — considere revisar a data."
+                : `≈ ${cron.horasPorDia}h por dia para cumprir a meta`}
+            </p>
+          )}
+
+          <button
+            onClick={() => setVerCronograma((v) => !v)}
+            className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {verCronograma ? "Ocultar cronograma" : "Ver cronograma completo"}
+          </button>
+
+          {verCronograma && (
+            <div className="mt-3 space-y-3 border-t pt-3 dark:border-slate-700">
+              {cron.dias.map((d, i) => (
+                <div key={i}>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {i === 0 ? "Hoje" : formatarDataCurta(d.data)}
+                  </p>
+                  <ul className="mt-0.5 space-y-0.5">
+                    {d.itens.map((it) => (
+                      <li key={it.indice} className="text-sm">
+                        📌 {it.titulo}{" "}
+                        <span className="text-slate-500 dark:text-slate-400">(~{it.horas}h)</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         {roteiro.topicos.map((t: Topico, i: number) => (
