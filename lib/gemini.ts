@@ -98,6 +98,26 @@ Crie entre 6 e 10 tópicos, do básico ao avançado, em ordem lógica de aprendi
   return chamarGemini(prompt);
 }
 
+export async function gerarBuscas(titulos: string[]) {
+  const lista = titulos.map((t, i) => `${i + 1}. ${t}`).join("\n");
+  const prompt = `Você é um professor. Para cada tópico abaixo, gere um termo curto de busca para YouTube (buscaVideos) e o título de um livro conhecido sobre o tópico (buscaLivros), de preferência em inglês porque há mais acervo gratuito.
+
+Tópicos:
+${lista}
+
+Responda APENAS com um JSON válido, sem texto fora dele, no formato:
+{
+  "buscas": [
+    { "buscaVideos": "termo curto para o youtube", "buscaLivros": "titulo de um livro conhecido, de preferencia em ingles" }
+  ]
+}
+
+A lista "buscas" deve ter exatamente ${titulos.length} itens, na mesma ordem dos tópicos.`;
+
+  const resultado = await chamarGemini(prompt);
+  return resultado?.buscas ?? [];
+}
+
 export async function gerarFlashcards(titulo: string, descricao: string) {
   const prompt = `Você é um professor. Crie 5 flashcards de revisão sobre o tópico "${titulo}".
 Contexto do tópico: ${descricao}

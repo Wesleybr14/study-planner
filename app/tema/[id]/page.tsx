@@ -54,6 +54,7 @@ export default function TemaPage() {
   const [corrigido, setCorrigido] = useState<Record<number, boolean>>({});
   const [soGratis, setSoGratis] = useState<Record<number, boolean>>({});
   const [carregandoLivros, setCarregandoLivros] = useState<Record<number, boolean>>({});
+  const [atualizando, setAtualizando] = useState(false);
 
   useEffect(() => {
     carregar();
@@ -86,11 +87,18 @@ export default function TemaPage() {
     setRoteiro({ ...roteiro, topicos, progresso });
   }
 
-  async function carregarLivros(i: number, gratis: boolean) {
+  async function carregarVideos(i: number, q: string) {
+    try {
+      const v = await fetch(`/api/search-videos?q=${encodeURIComponent(q)}`).then((r) => r.json());
+      setVideos((p) => ({ ...p, [i]: v }));
+    } catch {
+      setVideos((p) => ({ ...p, [i]: [] }));
+    }
+  }
+
+  async function carregarLivros(i: number, gratis: boolean, q: string) {
     setCarregandoLivros((p) => ({ ...p, [i]: true }));
     try {
-      const t = roteiro.topicos[i];
-      const q = t.buscaLivros ?? t.titulo;
       const l = await fetch(
         `/api/search-books?q=${encodeURIComponent(q)}${gratis ? "&gratis=1" : ""}`
       ).then((r) => r.json());
@@ -109,15 +117,54 @@ export default function TemaPage() {
     }
     setAberto(i);
 
-    if (!videos[i]) {
-      const t = roteiro.topicos[i];
-      const v = await fetch(
-        `/api/search-videos?q=${encodeURIComponent(t.buscaVideos ?? t.titulo)}`
-      ).then((r) => r.json());
-      setVideos((prev) => ({ ...prev, [i]: v }));
-    }
-    if (!livros[i]) {
-      carregarLivros(i, !!soGratis[i]);
+    const t = roteiro.topicos[i];
+    if (!videos[i]) carregarVideos(i, t.buscaVideos ?? t.titulo);
+    if (!livros[i]) carregarLivros(i, !!soGratis[i], t.buscaLivros ?? t.titulo);
+  }
+
+  // Regenera os termos de busca (vídeos e livros) usando IA — útil para
+  // roteiros antigos criados com termos que traziam poucos resultados livres.
+  async function atualizarBuscas() {
+    if (
+      !confirm(
+        "Atualizar os termos de busca de vídeos e livros deste roteiro? Isso usa IA e pode levar alguns segundos."
+      )
+    )
+      return;
+
+    setAtualizando(true);
+    try {
+      const titulos = roteiro.topicos.map((t: any) => t.titulo);
+      const res = await fetch("/api/refresh-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titulos }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erro ?? "Erro ao atualizar buscas");
+
+      const topicos = roteiro.topicos.map((t: any, i: number) => ({
+        ...t,
+        buscaVideos: data.buscas[i]?.buscaVideos ?? t.buscaVideos,
+        buscaLivros: data.buscas[i]?.buscaLivros ?? t.buscaLivros,
+      }));
+      await salvarTopicos(topicos);
+
+      // Limpa os caches e recarrega o tópico aberto com os novos termos.
+      setVideos({});
+      setLivros({});
+      if (aberto !== null) {
+        carregarVideos(aberto, topicos[aberto].buscaVideos ?? topicos[aberto].titulo);
+        carregarLivros(
+          aberto,
+          !!soGratis[aberto],
+          topicos[aberto].buscaLivros ?? topicos[aberto].titulo
+        );
+      }
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setAtualizando(false);
     }
   }
 
@@ -275,6 +322,17 @@ export default function TemaPage() {
         </div>
       )}
 
+      <div className="mb-3 flex justify-end">
+        <button
+          onClick={atualizarBuscas}
+          disabled={atualizando}
+          title="Regera os termos de busca de vídeos e livros deste roteiro"
+          className="text-xs text-slate-500 hover:text-blue-600 disabled:opacity-50 dark:text-slate-400 dark:hover:text-blue-400"
+        >
+          {atualizando ? "Atualizando buscas..." : "🔄 Atualizar buscas (livros e vídeos)"}
+        </button>
+      </div>
+
       <div className="space-y-3">
         {roteiro.topicos.map((t: Topico, i: number) => (
           <div key={i} className="rounded-xl bg-white shadow dark:border dark:border-slate-800 dark:bg-slate-900">
@@ -340,7 +398,11 @@ export default function TemaPage() {
                         onChange={(e) => {
                           const v = e.target.checked;
                           setSoGratis((p) => ({ ...p, [i]: v }));
-                          carregarLivros(i, v);
+                          carregarLivros(
+                            i,
+                            v,
+                            roteiro.topicos[i].buscaLivros ?? roteiro.topicos[i].titulo
+                          );
                         }}
                         className="h-3.5 w-3.5 accent-green-500"
                       />
