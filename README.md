@@ -10,6 +10,7 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 🎬 Busca automática de vídeos (YouTube Data API)
 - 📖 Livros automáticos via Open Library (confiável, sem chave) + Google Books
 - 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
+- 🔄 Botão para regenerar as buscas de vídeos/livros de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
 - 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
