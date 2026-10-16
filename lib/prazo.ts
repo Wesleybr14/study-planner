@@ -22,10 +22,10 @@ export function labelPrazo(prazo?: string | null): string | null {
 /** Cor (classe Tailwind) conforme a urgência. */
 export function corPrazo(prazo?: string | null): string {
   const d = diasRestantes(prazo);
-  if (d === null) return "text-slate-500";
-  if (d < 0) return "text-red-600";
-  if (d <= 3) return "text-orange-500";
-  return "text-slate-500";
+  if (d === null) return "text-slate-500 dark:text-slate-400";
+  if (d < 0) return "text-red-600 dark:text-red-400";
+  if (d <= 3) return "text-orange-500 dark:text-orange-400";
+  return "text-slate-500 dark:text-slate-400";
 }
 
 /** Data formatada em pt-BR. */

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
+import ThemeToggle from "@/components/ThemeToggle";
+import BottomNav from "@/components/BottomNav";
 
 type Flashcard = { frente: string; verso: string };
 
@@ -110,7 +112,7 @@ export default function TemaPage() {
   if (!roteiro) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-500">Carregando...</p>
+        <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
       </main>
     );
   }
@@ -118,13 +120,16 @@ export default function TemaPage() {
   const progresso = Math.round((concluidos.filter(Boolean).length / concluidos.length) * 100);
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <button onClick={() => router.push("/dashboard")} className="mb-4 text-sm text-blue-600 hover:underline">
-        ← Voltar
-      </button>
+    <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
+      <div className="mb-4 flex items-center justify-between">
+        <button onClick={() => router.push("/dashboard")} className="text-sm text-blue-600 hover:underline dark:text-blue-400">
+          ← Voltar
+        </button>
+        <ThemeToggle />
+      </div>
 
       <h1 className="text-2xl font-bold">{roteiro.tema}</h1>
-      <p className="mb-2 text-slate-500">{roteiro.descricao}</p>
+      <p className="mb-2 text-slate-500 dark:text-slate-400">{roteiro.descricao}</p>
 
       {roteiro.prazo && (
         <p className={`mb-4 text-sm font-medium ${corPrazo(roteiro.prazo)}`}>
@@ -137,14 +142,14 @@ export default function TemaPage() {
           <span>Progresso</span>
           <span>{progresso}%</span>
         </div>
-        <div className="h-2 rounded-full bg-slate-200">
+        <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800">
           <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${progresso}%` }} />
         </div>
       </div>
 
       <div className="space-y-3">
         {roteiro.topicos.map((t: Topico, i: number) => (
-          <div key={i} className="rounded-xl bg-white shadow">
+          <div key={i} className="rounded-xl bg-white shadow dark:border dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-start gap-3 p-4">
               <input
                 type="checkbox"
@@ -154,13 +159,15 @@ export default function TemaPage() {
               />
               <div className="flex-1 cursor-pointer" onClick={() => abrir(i)}>
                 <div className="flex items-center gap-2">
-                  <span className={`font-semibold ${concluidos[i] ? "text-slate-400 line-through" : ""}`}>
+                  <span className={`font-semibold ${concluidos[i] ? "text-slate-400 line-through dark:text-slate-500" : ""}`}>
                     {i + 1}. {t.titulo}
                   </span>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{t.nivel}</span>
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    {t.nivel}
+                  </span>
                 </div>
-                <p className="text-sm text-slate-500">{t.descricao}</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t.descricao}</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   ⏱ {t.duracaoEstimada}
                   {t.nota ? " · 📝 com anotação" : ""}
                   {t.flashcards?.length ? ` · 🃏 ${t.flashcards.length} flashcards` : ""}
@@ -169,20 +176,27 @@ export default function TemaPage() {
             </div>
 
             {aberto === i && (
-              <div className="space-y-4 border-t p-4">
+              <div className="space-y-4 border-t p-4 dark:border-slate-800">
                 <div>
                   <h3 className="mb-2 text-sm font-semibold">🎬 Vídeos</h3>
                   <div className="grid gap-2">
                     {(videos[i] ?? []).map((v: any, k: number) => (
-                      <a key={k} href={v.url} target="_blank" className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100">
+                      <a
+                        key={k}
+                        href={v.url}
+                        target="_blank"
+                        className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                      >
                         {v.thumbnail && <img src={v.thumbnail} alt="" className="h-16 w-28 rounded object-cover" />}
                         <div>
                           <p className="text-sm font-medium">{v.titulo}</p>
-                          <p className="text-xs text-slate-500">{v.canal}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{v.canal}</p>
                         </div>
                       </a>
                     ))}
-                    {videos[i]?.length === 0 && <p className="text-sm text-slate-400">Nenhum vídeo encontrado.</p>}
+                    {videos[i]?.length === 0 && (
+                      <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum vídeo encontrado.</p>
+                    )}
                   </div>
                 </div>
 
@@ -190,15 +204,22 @@ export default function TemaPage() {
                   <h3 className="mb-2 text-sm font-semibold">📖 Livros</h3>
                   <div className="grid gap-2">
                     {(livros[i] ?? []).map((l: any, k: number) => (
-                      <a key={k} href={l.url} target="_blank" className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100">
+                      <a
+                        key={k}
+                        href={l.url}
+                        target="_blank"
+                        className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                      >
                         {l.capa && <img src={l.capa} alt="" className="h-16 w-12 rounded object-cover" />}
                         <div>
                           <p className="text-sm font-medium">{l.titulo}</p>
-                          <p className="text-xs text-slate-500">{l.autores}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{l.autores}</p>
                         </div>
                       </a>
                     ))}
-                    {livros[i]?.length === 0 && <p className="text-sm text-slate-400">Nenhum livro encontrado.</p>}
+                    {livros[i]?.length === 0 && (
+                      <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum livro encontrado.</p>
+                    )}
                   </div>
                 </div>
 
@@ -210,7 +231,7 @@ export default function TemaPage() {
                     onBlur={() => salvarNota(i)}
                     rows={3}
                     placeholder="Escreva aqui o que aprendeu, dúvidas, links..."
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                   />
                 </div>
 
@@ -232,10 +253,10 @@ export default function TemaPage() {
                         <button
                           key={k}
                           onClick={() => setVirados((p) => ({ ...p, [chave]: !p[chave] }))}
-                          className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-left text-sm hover:bg-purple-100"
+                          className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-left text-sm hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/40 dark:hover:bg-purple-900/60"
                         >
                           <p className="font-medium">{f.frente}</p>
-                          <p className={`mt-1 ${virados[chave] ? "text-purple-700" : "text-slate-400"}`}>
+                          <p className={`mt-1 ${virados[chave] ? "text-purple-700 dark:text-purple-300" : "text-slate-400 dark:text-slate-500"}`}>
                             {virados[chave] ? f.verso : "▶ Clique para ver a resposta"}
                           </p>
                         </button>
@@ -248,6 +269,8 @@ export default function TemaPage() {
           </div>
         ))}
       </div>
+
+      <BottomNav />
     </main>
   );
 }

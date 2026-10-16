@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
+import ThemeToggle from "@/components/ThemeToggle";
+import BottomNav from "@/components/BottomNav";
 
 type Roteiro = {
   id: string;
@@ -81,31 +83,34 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
+    <main className="mx-auto max-w-2xl p-6 pb-24 md:pb-6">
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold">📚 Meus estudos</h1>
-        <button onClick={sair} className="text-sm text-slate-500 hover:text-red-500">
-          Sair
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button onClick={sair} className="text-sm text-slate-500 hover:text-red-500 dark:text-slate-400">
+            Sair
+          </button>
+        </div>
       </header>
 
-      <form onSubmit={criar} className="mb-8 rounded-2xl bg-white p-6 shadow">
+      <form onSubmit={criar} id="novo" className="mb-8 rounded-2xl bg-white p-6 shadow dark:border dark:border-slate-800 dark:bg-slate-900">
         <label className="mb-2 block font-medium">Sobre o que você quer estudar?</label>
         <input
           value={tema}
           onChange={(e) => setTema(e.target.value)}
           placeholder="Ex: Inteligência Artificial, Finanças, Inglês..."
-          className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
+          className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         <div className="mb-3">
-          <label className="mb-1 block text-sm text-slate-600">
+          <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">
             Meta (opcional) — até quando quer terminar?
           </label>
           <input
             type="date"
             value={prazo}
             onChange={(e) => setPrazo(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
         <button
@@ -121,29 +126,31 @@ export default function Dashboard() {
 
       <div className="space-y-3">
         {roteiros.length === 0 && (
-          <p className="text-center text-slate-400">Nenhum roteiro ainda. Crie o primeiro acima!</p>
+          <p className="text-center text-slate-400 dark:text-slate-500">Nenhum roteiro ainda. Crie o primeiro acima!</p>
         )}
         {roteiros.map((r) => (
           <button
             key={r.id}
             onClick={() => router.push(`/tema/${r.id}`)}
-            className="block w-full rounded-xl bg-white p-4 text-left shadow hover:shadow-md"
+            className="block w-full rounded-xl bg-white p-4 text-left shadow hover:shadow-md dark:border dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">{r.tema}</span>
-              <span className="text-sm text-slate-500">{r.progresso}%</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{r.progresso}%</span>
             </div>
             {r.prazo && (
               <p className={`mt-1 text-xs ${corPrazo(r.prazo)}`}>
                 🎯 {labelPrazo(r.prazo)} · meta {formatarData(r.prazo)}
               </p>
             )}
-            <div className="mt-2 h-2 rounded-full bg-slate-100">
+            <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
               <div className="h-2 rounded-full bg-green-500" style={{ width: `${r.progresso}%` }} />
             </div>
           </button>
         ))}
       </div>
+
+      <BottomNav />
     </main>
   );
 }

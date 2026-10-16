@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Login() {
   const router = useRouter();
@@ -44,9 +45,12 @@ export default function Login() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+      <div className="fixed right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg dark:border dark:border-slate-800 dark:bg-slate-900">
         <h1 className="mb-1 text-2xl font-bold">📚 Study Planner</h1>
-        <p className="mb-6 text-sm text-slate-500">
+        <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
           {modo === "login" ? "Entre na sua conta" : "Crie sua conta grátis"}
         </p>
 
@@ -57,7 +61,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <input
             type="password"
@@ -66,7 +70,7 @@ export default function Login() {
             onChange={(e) => setSenha(e.target.value)}
             required
             minLength={6}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
 
           {erro && <p className="text-sm text-red-500">{erro}</p>}
@@ -83,7 +87,7 @@ export default function Login() {
 
         <button
           onClick={() => setModo(modo === "login" ? "cadastro" : "login")}
-          className="mt-4 w-full text-sm text-blue-600 hover:underline"
+          className="mt-4 w-full text-sm text-blue-600 hover:underline dark:text-blue-400"
         >
           {modo === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
         </button>
