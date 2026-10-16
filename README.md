@@ -78,7 +78,7 @@ git push -u origin main
 
 ```
 study-planner/
-├── app/                    # páginas (login, dashboard, tema, revisao, estatisticas)
+├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
 │   └── api/                # rotas: gemini, youtube, books, flashcards, quiz
 ├── components/             # ThemeToggle, BottomNav, Cronometro
 ├── lib/                    # supabase, gemini, youtube, googlebooks, prazo, cronograma, revisao
