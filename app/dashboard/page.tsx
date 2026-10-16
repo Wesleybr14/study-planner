@@ -109,6 +109,12 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">📚 Meus estudos</h1>
         <div className="flex items-center gap-2">
           <Link
+            href="/cronometro"
+            className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
+          >
+            ⏱ Foco
+          </Link>
+          <Link
             href="/revisao"
             className="hidden text-sm text-slate-500 hover:text-blue-600 md:inline dark:text-slate-400 dark:hover:text-blue-400"
           >

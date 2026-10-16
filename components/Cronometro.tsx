@@ -19,8 +19,8 @@ export default function Cronometro({
   roteiroId,
   topicoIndex,
 }: {
-  roteiroId: string;
-  topicoIndex: number;
+  roteiroId?: string;
+  topicoIndex?: number;
 }) {
   const [modo, setModo] = useState<"livre" | "pomodoro">("livre");
   const [rodando, setRodando] = useState(false);
@@ -58,8 +58,8 @@ export default function Cronometro({
     const userId = auth.session?.user.id;
     await supabase.from("sessoes").insert({
       user_id: userId,
-      roteiro_id: roteiroId,
-      topico_index: topicoIndex,
+      roteiro_id: roteiroId ?? null,
+      topico_index: topicoIndex ?? null,
       segundos: sec,
     });
   }
