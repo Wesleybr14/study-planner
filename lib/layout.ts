@@ -28,6 +28,7 @@ export type Arranjos = {
   padrao: Layout; // usado em tópicos sem arranjo próprio
   trabalho: Record<string, Layout>; // arranjo por tópico (chave = roteiroId:indice)
   escolha: Record<string, string>; // arranjo escolhido por tópico ("custom" = editado à mão)
+  escolhaGlobal?: string; // arranjo aplicado a TODOS os tópicos (botão "Aplicar a todos")
   salvos: ArranjoSalvo[]; // biblioteca de arranjos nomeados
 };
 
@@ -248,6 +249,8 @@ export function normalizarArranjos(entrada: unknown): Arranjos {
     padrao: layoutDe(e.padrao) ?? base.padrao,
     trabalho,
     escolha,
+    escolhaGlobal:
+      typeof e.escolhaGlobal === "string" ? e.escolhaGlobal : undefined,
     salvos,
   };
 }

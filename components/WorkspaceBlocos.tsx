@@ -127,13 +127,12 @@ export default function WorkspaceBlocos({
     layoutRef.current = layout;
   }, [layout]);
 
-  /** Aplica um layout ao tópico atual (edição à mão). */
+  /** Aplica um layout só ao tópico atual (edição à mão). */
   function definirLayout(blocos: Bloco[], marcaEscolha = true) {
     setArranjos((a) =>
       a
         ? {
             ...a,
-            padrao: blocos,
             trabalho: { ...a.trabalho, [chave]: blocos },
             escolha: marcaEscolha
               ? { ...a.escolha, [chave]: "custom" }
@@ -182,7 +181,6 @@ export default function WorkspaceBlocos({
         a
           ? {
               ...a,
-              padrao: blocos,
               trabalho: { ...a.trabalho, [chave]: blocos },
               escolha: { ...a.escolha, [chave]: "custom" },
             }
@@ -244,6 +242,37 @@ export default function WorkspaceBlocos({
     );
   }
 
+  /** Aplica o arranjo atual a TODOS os tópicos (limpa ajustes individuais). */
+  function aplicarTodos() {
+    if (!arranjos || !layout) return;
+    const id = escolhaAtual;
+    const nomeArranjo =
+      id === "custom"
+        ? "o arranjo personalizado atual"
+        : `o arranjo "${
+            arranjos.salvos.find((s) => s.id === id)?.nome ??
+            id.replace("preset:", "")
+          }"`;
+    if (
+      !confirm(
+        `Aplicar ${nomeArranjo} a TODOS os tópicos?\n\nOs ajustes individuais de cada tópico serão substituídos.`,
+      )
+    )
+      return;
+    const blocos = layout.map((b) => ({ ...b }));
+    setArranjos((a) =>
+      a
+        ? {
+            ...a,
+            padrao: blocos,
+            trabalho: {},
+            escolha: {},
+            escolhaGlobal: id === "custom" ? undefined : id,
+          }
+        : a,
+    );
+  }
+
   /** Salva o arranjo atual da tópico como um arranjo nomeado. */
   function salvarArranjo() {
     if (!arranjos || !layout) return;
@@ -274,7 +303,12 @@ export default function WorkspaceBlocos({
       const escolha: Record<string, string> = {};
       for (const [k, v] of Object.entries(a.escolha))
         escolha[k] = v === id ? "custom" : v;
-      return { ...a, salvos: a.salvos.filter((s) => s.id !== id), escolha };
+      return {
+        ...a,
+        salvos: a.salvos.filter((s) => s.id !== id),
+        escolha,
+        escolhaGlobal: a.escolhaGlobal === id ? undefined : a.escolhaGlobal,
+      };
     });
   }
 
@@ -318,7 +352,8 @@ export default function WorkspaceBlocos({
     }
   }
 
-  const escolhaAtual = arranjos?.escolha[chave] ?? "custom";
+  const escolhaAtual =
+    arranjos?.escolha[chave] ?? arranjos?.escolhaGlobal ?? "custom";
   const podeExcluir =
     escolhaAtual !== "custom" && !escolhaAtual.startsWith("preset:");
 
@@ -380,6 +415,13 @@ export default function WorkspaceBlocos({
               🗑 Excluir
             </button>
           )}
+          <button
+            onClick={aplicarTodos}
+            title="Aplicar este arranjo a todos os tópicos (substitui os ajustes individuais)"
+            className="rounded-lg border border-blue-300 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+          >
+            📌 Aplicar a todos
+          </button>
         </div>
 
         {ocultos.length > 0 && (
