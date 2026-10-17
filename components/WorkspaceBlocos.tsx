@@ -196,14 +196,30 @@ export default function WorkspaceBlocos({
     setLayout(normalizarLayout(preset));
   }
 
+  function ocultar(id: TipoBloco) {
+    setLayout((atual) =>
+      atual
+        ? atual.map((b) => (b.id === id ? { ...b, oculto: true } : b))
+        : atual,
+    );
+  }
+
+  function mostrar(id: TipoBloco) {
+    setLayout((atual) =>
+      atual
+        ? atual.map((b) => (b.id === id ? { ...b, oculto: false } : b))
+        : atual,
+    );
+  }
+
   function conteudo(id: TipoBloco) {
     switch (id) {
       case "video":
-        return <VideosBloco topico={topico} />;
+        return <VideosBloco topico={topico} compacto />;
       case "livro":
-        return <LivrosBloco topico={topico} />;
+        return <LivrosBloco topico={topico} compacto />;
       case "artigos":
-        return <ArtigosBloco topico={topico} />;
+        return <ArtigosBloco topico={topico} compacto />;
       case "notas":
         return (
           <NotasBloco
@@ -222,7 +238,11 @@ export default function WorkspaceBlocos({
     }
   }
 
-  const linhas = layout ? Math.max(...layout.map((b) => b.y + b.h)) : 0;
+  const visiveis = layout ? layout.filter((b) => !b.oculto) : [];
+  const ocultos = layout ? layout.filter((b) => b.oculto) : [];
+  const linhas = visiveis.length
+    ? Math.max(...visiveis.map((b) => b.y + b.h))
+    : 0;
   const altura = linhas > 0 ? linhas * passoY - ESPACO : 0;
 
   return (
@@ -253,6 +273,22 @@ export default function WorkspaceBlocos({
           </button>
         </div>
 
+        {ocultos.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-slate-400 dark:text-slate-500">Ocultos:</span>
+            {ocultos.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => mostrar(b.id)}
+                title="Mostrar bloco"
+                className="rounded-lg bg-slate-100 px-2 py-1 font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                + {TIPOS[b.id].icone} {TIPOS[b.id].rotulo}
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={onFechar}
           className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
@@ -261,7 +297,7 @@ export default function WorkspaceBlocos({
         </button>
       </header>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3">
         {!layout ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Carregando arranjo...
@@ -269,26 +305,37 @@ export default function WorkspaceBlocos({
         ) : ehMobile ? (
           // Celular: blocos empilhados (sem arrastar/redimensionar).
           <div className="space-y-4">
-            {TIPOS_ORDEM.map((id) => (
-              <section
-                key={id}
-                className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-              >
-                <h3 className="mb-2 text-sm font-semibold">
-                  {TIPOS[id].icone} {TIPOS[id].rotulo}
-                </h3>
-                {conteudo(id)}
-              </section>
-            ))}
+            {TIPOS_ORDEM.filter((id) => visiveis.some((v) => v.id === id)).map(
+              (id) => (
+                <section
+                  key={id}
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">
+                      {TIPOS[id].icone} {TIPOS[id].rotulo}
+                    </h3>
+                    <button
+                      onClick={() => ocultar(id)}
+                      title="Ocultar bloco"
+                      className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                    >
+                      👁
+                    </button>
+                  </div>
+                  {conteudo(id)}
+                </section>
+              ),
+            )}
           </div>
         ) : (
           <div
             ref={areaRef}
-            className="relative mx-auto w-full max-w-[1400px]"
+            className="relative w-full"
             style={{ height: altura }}
           >
             {largura > 0 &&
-              layout.map((b) => {
+              visiveis.map((b) => {
                 const arrastandoEste = preview?.id === b.id;
                 const exibido = arrastandoEste && preview ? preview : b;
                 const invalido =
@@ -322,6 +369,14 @@ export default function WorkspaceBlocos({
                       <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                         ⠿
                       </span>
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => ocultar(b.id)}
+                        title="Ocultar bloco"
+                        className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                      >
+                        👁
+                      </button>
                     </header>
 
                     <div className="min-h-0 flex-1 overflow-auto p-3">

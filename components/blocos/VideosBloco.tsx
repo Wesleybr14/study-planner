@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 
 /** Bloco de vídeos: busca no YouTube e reproduz embutido. */
-export default function VideosBloco({ topico }: { topico: any }) {
+export default function VideosBloco({
+  topico,
+  compacto = false,
+}: {
+  topico: any;
+  compacto?: boolean;
+}) {
   const [videos, setVideos] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [sel, setSel] = useState<number | null>(null);
@@ -35,6 +41,57 @@ export default function VideosBloco({ topico }: { topico: any }) {
         Nenhum vídeo encontrado.
       </p>
     );
+
+  // Modo compacto (workspace): escolhe o vídeo e mostra só ele.
+  if (compacto) {
+    const v = videos[sel ?? 0];
+    const indice = sel ?? 0;
+    return (
+      <div className="flex h-full flex-col gap-2">
+        {videos.length > 1 && (
+          <select
+            value={indice}
+            onChange={(e) => setSel(Number(e.target.value))}
+            className="w-full shrink-0 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
+            {videos.map((vv: any, k: number) => (
+              <option key={k} value={k}>
+                {vv.titulo}
+              </option>
+            ))}
+          </select>
+        )}
+        {v?.videoId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${v.videoId}`}
+            title={v.titulo}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="min-h-0 w-full flex-1 rounded-lg"
+          />
+        ) : (
+          <p className="text-sm text-slate-400 dark:text-slate-500">
+            Este vídeo não pode ser incorporado.
+          </p>
+        )}
+        {v && (
+          <div className="flex shrink-0 items-center justify-between gap-2 text-xs">
+            <span className="min-w-0 truncate text-slate-500 dark:text-slate-400">
+              {v.canal}
+            </span>
+            <a
+              href={v.url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Abrir no YouTube ↗
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

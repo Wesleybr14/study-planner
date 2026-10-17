@@ -23,7 +23,7 @@ export default function AppShell({
   largura = "larga",
 }: {
   children: React.ReactNode;
-  largura?: "larga" | "foco";
+  largura?: "larga" | "foco" | "total";
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -53,7 +53,8 @@ export default function AppShell({
     "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
   const itemInativo =
     "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800";
-  const container = largura === "foco" ? "max-w-2xl" : "max-w-6xl";
+  const container =
+    largura === "foco" ? "max-w-2xl" : largura === "total" ? "" : "max-w-6xl";
 
   return (
     <div className="min-h-screen">

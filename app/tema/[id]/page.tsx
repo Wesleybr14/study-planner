@@ -128,7 +128,7 @@ export default function TemaPage() {
   const cron = calcularCronograma(roteiro);
 
   return (
-    <AppShell>
+    <AppShell largura="total">
       <button
         onClick={() => router.push("/dashboard")}
         className="mb-4 text-sm text-blue-600 hover:underline dark:text-blue-400"

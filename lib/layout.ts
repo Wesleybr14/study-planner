@@ -13,6 +13,7 @@ export type Bloco = {
   y: number; // linha inicial (0-based)
   w: number; // largura em colunas
   h: number; // altura em linhas
+  oculto?: boolean; // bloco escondido (não ocupa espaço na grade)
 };
 
 export type Layout = Bloco[];
@@ -42,28 +43,24 @@ export const TIPOS_ORDEM: TipoBloco[] = [
 const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 
-// Layout inicial: vídeo em cima à esquerda, livro em modo retrato à direita,
-// quiz abaixo à esquerda — como no exemplo.
+const num = (v: unknown, def: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.round(v) : def;
+
+// Layout inicial: vídeo grande em cima à esquerda, livro em modo retrato à
+// direita, quiz e notas logo abaixo — aproveitando a largura da tela.
 export const LAYOUT_PADRAO: Layout = [
-  { id: "video", x: 0, y: 0, w: 7, h: 7 },
-  { id: "livro", x: 7, y: 0, w: 5, h: 12 },
-  { id: "quiz", x: 0, y: 7, w: 7, h: 5 },
-  { id: "notas", x: 0, y: 12, w: 7, h: 6 },
-  { id: "artigos", x: 7, y: 12, w: 5, h: 6 },
-  { id: "flashcards", x: 0, y: 18, w: 12, h: 4 },
+  { id: "video", x: 0, y: 0, w: 8, h: 8 },
+  { id: "livro", x: 8, y: 0, w: 4, h: 12 },
+  { id: "quiz", x: 0, y: 8, w: 4, h: 5 },
+  { id: "notas", x: 4, y: 8, w: 4, h: 5 },
+  { id: "artigos", x: 8, y: 12, w: 4, h: 6 },
+  { id: "flashcards", x: 0, y: 13, w: 8, h: 5 },
 ];
 
 export const PRESETS: { nome: string; layout: Layout }[] = [
   {
     nome: "Vídeo + lateral",
-    layout: [
-      { id: "video", x: 0, y: 0, w: 7, h: 7 },
-      { id: "livro", x: 7, y: 0, w: 5, h: 12 },
-      { id: "quiz", x: 0, y: 7, w: 7, h: 5 },
-      { id: "notas", x: 0, y: 12, w: 7, h: 6 },
-      { id: "artigos", x: 7, y: 12, w: 5, h: 6 },
-      { id: "flashcards", x: 0, y: 18, w: 12, h: 4 },
-    ],
+    layout: LAYOUT_PADRAO.map((b) => ({ ...b })),
   },
   {
     nome: "Grade 2×2",
@@ -107,9 +104,9 @@ export function colide(a: Bloco, b: Bloco): boolean {
   );
 }
 
-/** O bloco `alvo` cabe sem colidir com os demais? */
+/** O bloco `alvo` cabe sem colidir com os demais blocos visíveis? */
 export function cabe(layout: Layout, alvo: Bloco): boolean {
-  return !layout.some((b) => b.id !== alvo.id && colide(b, alvo));
+  return !layout.some((b) => b.id !== alvo.id && !b.oculto && colide(b, alvo));
 }
 
 /** Garante que o layout tenha todos os tipos, valores válidos e sem colisões. */
@@ -119,18 +116,15 @@ export function normalizarLayout(entrada: unknown): Layout {
   const porId = new Map<TipoBloco, Bloco>();
   for (const item of entrada as any[]) {
     if (!item || !TIPOS[item.id as TipoBloco]) continue;
-    const x = Number.isFinite(item.x)
-      ? clamp(Math.round(item.x), 0, COLUNAS - 1)
-      : 0;
-    const w = Number.isFinite(item.w)
-      ? clamp(Math.round(item.w), 1, COLUNAS - x)
-      : 6;
+    const x = clamp(num(item.x, 0), 0, COLUNAS - 1);
+    const w = clamp(num(item.w, 6), 1, COLUNAS - x);
     porId.set(item.id, {
       id: item.id,
       x,
-      y: Number.isFinite(item.y) ? Math.max(0, Math.round(item.y)) : 0,
+      y: Math.max(0, num(item.y, 0)),
       w,
-      h: Number.isFinite(item.h) ? Math.max(2, Math.round(item.h)) : 5,
+      h: Math.max(2, num(item.h, 5)),
+      ...(item.oculto ? { oculto: true } : {}),
     });
   }
 
@@ -138,10 +132,12 @@ export function normalizarLayout(entrada: unknown): Layout {
   for (const def of LAYOUT_PADRAO)
     if (!porId.has(def.id)) porId.set(def.id, { ...def });
 
+  // Valida colisões apenas entre os blocos visíveis.
   const lista = [...porId.values()];
-  for (let i = 0; i < lista.length; i++)
-    for (let j = i + 1; j < lista.length; j++)
-      if (colide(lista[i], lista[j]))
+  const visiveis = lista.filter((b) => !b.oculto);
+  for (let i = 0; i < visiveis.length; i++)
+    for (let j = i + 1; j < visiveis.length; j++)
+      if (colide(visiveis[i], visiveis[j]))
         return LAYOUT_PADRAO.map((b) => ({ ...b }));
 
   return lista;

@@ -12,7 +12,7 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
 - 🔬 Artigos científicos gratuitos (arXiv, Europe PMC, DOAJ) com resumo e PDF
 - 🗂️ **Painel lateral por tópico**: reúne vídeos, livros, artigos, anotações, flashcards e quiz sem sair da página
-- 🧩 **Workspace em blocos** (estilo *snap*): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, notas, flashcards e quiz **arrastando e redimensionando** livremente, ou escolhendo um **layout pronto**. O arranjo fica salvo na nuvem (um só para todos os tópicos)
+- 🧩 **Workspace em blocos** (estilo *snap*): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, notas, flashcards e quiz **arrastando e redimensionando** livremente, ou escolhendo um **layout pronto**. Dentro de cada bloco dá para **trocar qual vídeo/livro/artigo aparece**, **ocultar** blocos que você não quer ver (e mostrá-los de novo depois) e salvar o arranjo **na nuvem** (um só para todos os tópicos)
 - 🔄 Botão para regenerar as buscas de vídeos/livros/artigos de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
