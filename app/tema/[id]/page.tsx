@@ -7,6 +7,7 @@ import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
 import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
 import AppShell from "@/components/AppShell";
 import TopicoDrawer from "@/components/TopicoDrawer";
+import WorkspaceBlocos from "@/components/WorkspaceBlocos";
 
 type Flashcard = { frente: string; verso: string };
 
@@ -28,6 +29,7 @@ export default function TemaPage() {
   const [roteiro, setRoteiro] = useState<any>(null);
   const [concluidos, setConcluidos] = useState<boolean[]>([]);
   const [aberto, setAberto] = useState<number | null>(null);
+  const [expandido, setExpandido] = useState(false);
   const [verCronograma, setVerCronograma] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
 
@@ -274,7 +276,10 @@ export default function TemaPage() {
                 />
                 <div
                   className="flex-1 cursor-pointer"
-                  onClick={() => setAberto(i)}
+                  onClick={() => {
+                    setExpandido(false);
+                    setAberto(i);
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -310,14 +315,30 @@ export default function TemaPage() {
         </div>
       </div>
 
-      <TopicoDrawer
-        aberto={aberto !== null}
-        onFechar={() => setAberto(null)}
-        topico={aberto !== null ? roteiro.topicos[aberto] : null}
-        indice={aberto ?? 0}
-        roteiroId={id}
-        onSalvarTopico={salvarTopico}
-      />
+      {(!expandido || aberto === null) && (
+        <TopicoDrawer
+          aberto={aberto !== null}
+          onFechar={() => {
+            setExpandido(false);
+            setAberto(null);
+          }}
+          onExpandir={() => setExpandido(true)}
+          topico={aberto !== null ? roteiro.topicos[aberto] : null}
+          indice={aberto ?? 0}
+          roteiroId={id}
+          onSalvarTopico={salvarTopico}
+        />
+      )}
+
+      {expandido && aberto !== null && (
+        <WorkspaceBlocos
+          topico={roteiro.topicos[aberto]}
+          indice={aberto}
+          roteiroId={id}
+          onFechar={() => setExpandido(false)}
+          onSalvarTopico={salvarTopico}
+        />
+      )}
     </AppShell>
   );
 }

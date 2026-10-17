@@ -1,0 +1,120 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+/** Bloco de vídeos: busca no YouTube e reproduz embutido. */
+export default function VideosBloco({ topico }: { topico: any }) {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [sel, setSel] = useState<number | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    const q = topico?.buscaVideos ?? topico?.titulo ?? "";
+    setCarregando(true);
+    setSel(null);
+    fetch(`/api/search-videos?q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((d) => vivo && setVideos(Array.isArray(d) ? d : []))
+      .catch(() => vivo && setVideos([]))
+      .finally(() => vivo && setCarregando(false));
+    return () => {
+      vivo = false;
+    };
+  }, [topico?.buscaVideos, topico?.titulo]);
+
+  if (carregando)
+    return (
+      <p className="text-sm text-slate-400 dark:text-slate-500">
+        Buscando vídeos...
+      </p>
+    );
+  if (videos.length === 0)
+    return (
+      <p className="text-sm text-slate-400 dark:text-slate-500">
+        Nenhum vídeo encontrado.
+      </p>
+    );
+
+  return (
+    <div className="space-y-2">
+      {videos.map((v: any, k: number) =>
+        v.videoId ? (
+          <div
+            key={k}
+            className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+          >
+            {sel === k ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${v.videoId}`}
+                title={v.titulo}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="aspect-video w-full"
+              />
+            ) : (
+              <button
+                onClick={() => setSel(k)}
+                className="flex w-full gap-3 p-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                {v.thumbnail && (
+                  <img
+                    src={v.thumbnail}
+                    alt=""
+                    className="h-14 w-24 shrink-0 rounded object-cover"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{v.titulo}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {v.canal}
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    ▶ Assistir aqui
+                  </p>
+                </div>
+              </button>
+            )}
+            {sel === k && (
+              <div className="flex items-center justify-between gap-2 p-2">
+                <p className="min-w-0 truncate text-xs text-slate-500 dark:text-slate-400">
+                  {v.titulo}
+                </p>
+                <a
+                  href={v.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Abrir no YouTube ↗
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          <a
+            key={k}
+            href={v.url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+          >
+            {v.thumbnail && (
+              <img
+                src={v.thumbnail}
+                alt=""
+                className="h-14 w-24 shrink-0 rounded object-cover"
+              />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{v.titulo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {v.canal}
+              </p>
+            </div>
+          </a>
+        ),
+      )}
+    </div>
+  );
+}

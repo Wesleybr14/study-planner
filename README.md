@@ -12,6 +12,7 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
 - 🔬 Artigos científicos gratuitos (arXiv, Europe PMC, DOAJ) com resumo e PDF
 - 🗂️ **Painel lateral por tópico**: reúne vídeos, livros, artigos, anotações, flashcards e quiz sem sair da página
+- 🧩 **Workspace em blocos** (estilo *snap*): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, notas, flashcards e quiz **arrastando e redimensionando** livremente, ou escolhendo um **layout pronto**. O arranjo fica salvo na nuvem (um só para todos os tópicos)
 - 🔄 Botão para regenerar as buscas de vídeos/livros/artigos de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
@@ -52,7 +53,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 No painel do Supabase, abra **SQL Editor > New query**, cole o conteúdo de
 `supabase-setup.sql` e clique em **Run**.
 Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql`
-(prazo) e `supabase-migration-3.sql` (sessões de estudo).
+(prazo), `supabase-migration-3.sql` (sessões de estudo) e `supabase-migration-4.sql`
+(arranjo do workspace em blocos).
 
 ### 3. Instalar e rodar
 
@@ -91,11 +93,13 @@ git push -u origin main
 study-planner/
 ├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
 │   └── api/                # rotas: gemini, youtube, books, artigos, flashcards, quiz
-├── components/             # AppShell, TopicoDrawer, BottomNav, ThemeToggle, Cronometro
-├── lib/                    # supabase, gemini, youtube, books, artigos, prazo, cronograma, revisao
+├── components/             # AppShell, TopicoDrawer, WorkspaceBlocos, BottomNav, ThemeToggle, Cronometro
+│   └── blocos/             # blocos reutilizáveis: vídeo, livro, artigos, notas, flashcards, quiz
+├── lib/                    # supabase, gemini, youtube, books, artigos, layout, prazo, cronograma, revisao
 ├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)
 ├── supabase-migration-3.sql# migração (sessões de estudo)
+├── supabase-migration-4.sql# migração (arranjo do workspace em blocos)
 ├── .env.example            # modelo das variáveis
 └── .env.local              # suas chaves (NÃO vai pro Git)
 ```
