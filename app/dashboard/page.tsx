@@ -15,6 +15,7 @@ type Roteiro = {
   topicos: any[];
   progresso: number;
   prazo: string | null;
+  tags?: string[];
   criado_em: string;
 };
 
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [tema, setTema] = useState("");
   const [prazo, setPrazo] = useState("");
+  const [tags, setTags] = useState("");
   const [gerando, setGerando] = useState(false);
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [erro, setErro] = useState("");
@@ -78,10 +80,15 @@ export default function Dashboard() {
         topicos: plano.topicos,
         progresso: 0,
         prazo: prazo || null,
+        tags: tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       });
 
       setTema("");
       setPrazo("");
+      setTags("");
       carregarRoteiros();
     } catch (err: any) {
       setErro(err.message);
@@ -111,12 +118,21 @@ export default function Dashboard() {
 
   const roteirosFiltrados = roteiros.filter((r) => {
     const q = filtro.toLowerCase().trim();
+    if (q.startsWith("#")) {
+      const tag = q.slice(1);
+      return (r.tags ?? []).some((t) => t.toLowerCase().includes(tag));
+    }
     if (!q) return true;
     return (
       (r.tema || "").toLowerCase().includes(q) ||
-      (r.descricao || "").toLowerCase().includes(q)
+      (r.descricao || "").toLowerCase().includes(q) ||
+      (r.tags ?? []).some((t) => t.toLowerCase().includes(q))
     );
   });
+
+  const todasTags = Array.from(
+    new Set(roteiros.flatMap((r) => r.tags ?? [])),
+  ).sort();
 
   return (
     <AppShell>
@@ -168,6 +184,17 @@ export default function Dashboard() {
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
+          <div className="mb-3">
+            <label className="mb-1 block text-sm text-slate-600 dark:text-slate-300">
+              Tags (opcional) — separe por vírgula
+            </label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="Ex: faculdade, exame, matemática"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+          </div>
           <button
             type="submit"
             disabled={gerando}
@@ -190,11 +217,39 @@ export default function Dashboard() {
               <input
                 value={filtro}
                 onChange={(e) => setFiltro(e.target.value)}
-                placeholder="Buscar por título ou descrição..."
+                placeholder="Buscar por título, descrição ou #tag..."
                 className="w-full sm:w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800"
               />
             )}
           </div>
+          {todasTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                🏷 Filtrar:
+              </span>
+              {todasTags.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFiltro(filtro === `#${t}` ? "" : `#${t}`)}
+                  className={`rounded-full px-2 py-0.5 text-xs transition ${
+                    filtro === `#${t}`
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+              {filtro && (
+                <button
+                  onClick={() => setFiltro("")}
+                  className="text-xs text-slate-400 underline hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  limpar
+                </button>
+              )}
+            </div>
+          )}
           {roteiros.length === 0 ? (
             <p className="rounded-xl bg-white p-8 text-center text-slate-400 shadow dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
               Nenhum roteiro ainda. Crie o primeiro ao lado!
@@ -217,6 +272,18 @@ export default function Dashboard() {
                       {r.progresso}%
                     </span>
                   </div>
+                  {(r.tags ?? []).length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {(r.tags ?? []).map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {r.prazo && (
                     <p className={`mt-1 text-xs ${corPrazo(r.prazo)}`}>
                       🎯 {labelPrazo(r.prazo)} · meta {formatarData(r.prazo)}

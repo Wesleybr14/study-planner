@@ -49,7 +49,6 @@ export default function TopicoDrawer({
     if (aberto) setAba("videos");
   }, [aberto, indice]);
 
-
   // Esc fecha; trava o scroll do fundo enquanto aberto.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -71,10 +70,18 @@ export default function TopicoDrawer({
       ...topico,
       titulo: `${topico.titulo} (cópia)`,
       nota: topico.nota ?? "",
-      flashcards: Array.isArray(topico.flashcards) ? topico.flashcards.map((f: any) => ({ ...f })) : [],
-      videosEscolhidos: Array.isArray(topico.videosEscolhidos) ? [...topico.videosEscolhidos] : [],
-      livrosEscolhidos: Array.isArray(topico.livrosEscolhidos) ? [...topico.livrosEscolhidos] : [],
-      artigosEscolhidos: Array.isArray(topico.artigosEscolhidos) ? [...topico.artigosEscolhidos] : [],
+      flashcards: Array.isArray(topico.flashcards)
+        ? topico.flashcards.map((f: any) => ({ ...f }))
+        : [],
+      videosEscolhidos: Array.isArray(topico.videosEscolhidos)
+        ? [...topico.videosEscolhidos]
+        : [],
+      livrosEscolhidos: Array.isArray(topico.livrosEscolhidos)
+        ? [...topico.livrosEscolhidos]
+        : [],
+      artigosEscolhidos: Array.isArray(topico.artigosEscolhidos)
+        ? [...topico.artigosEscolhidos]
+        : [],
     };
     onSalvarTopico({ _duplicarApos: true, _copia: copia } as any);
     onFechar();

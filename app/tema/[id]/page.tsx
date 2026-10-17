@@ -186,6 +186,24 @@ export default function TemaPage() {
     else if (aberto === destino) setAberto(atual);
   }
 
+  async function salvarTags(tags: string[]) {
+    setRoteiro((r: any) => ({ ...r, tags }));
+    await supabase.from("roteiros").update({ tags }).eq("id", id);
+  }
+
+  function adicionarTag() {
+    const tag = window.prompt("Nova tag (sem #):")?.trim().replace(/^#/, "");
+    if (!tag) return;
+    const atual = roteiro.tags ?? [];
+    if (atual.some((t: string) => t.toLowerCase() === tag.toLowerCase()))
+      return;
+    salvarTags([...atual, tag]);
+  }
+
+  function removerTag(tag: string) {
+    salvarTags((roteiro.tags ?? []).filter((t: string) => t !== tag));
+  }
+
   if (!roteiro) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -218,6 +236,29 @@ export default function TemaPage() {
             🎯 Meta: {formatarData(roteiro.prazo)} · {labelPrazo(roteiro.prazo)}
           </p>
         )}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {(roteiro.tags ?? []).map((t: string) => (
+            <span
+              key={t}
+              className="group inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            >
+              #{t}
+              <button
+                onClick={() => removerTag(t)}
+                title="Remover tag"
+                className="text-slate-400 hover:text-red-500"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={adicionarTag}
+            className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400"
+          >
+            ＋ tag
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -390,26 +431,32 @@ export default function TemaPage() {
                       · abrir →
                     </span>
                   </p>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); mover(i, i-1); }}
-                      disabled={i === 0}
-                      title="Mover para cima"
-                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); mover(i, i+1); }}
-                      disabled={i === roteiro.topicos.length - 1}
-                      title="Mover para baixo"
-                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                    >
-                      ↓
-                    </button>
-                  </div>
+                </div>
+                <div className="flex flex-col gap-1 self-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      mover(i, i - 1);
+                    }}
+                    disabled={i === 0}
+                    title="Mover para cima"
+                    className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      mover(i, i + 1);
+                    }}
+                    disabled={i === roteiro.topicos.length - 1}
+                    title="Mover para baixo"
+                    className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                  >
+                    ↓
+                  </button>
                 </div>
               </div>
             </div>

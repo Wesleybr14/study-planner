@@ -87,14 +87,26 @@ export default function Cronometro({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+    <div
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          setRodando((r) => !r);
+        }
+      }}
+      title="Dica: clique aqui e use a barra de espaço para iniciar/pausar"
+      className="rounded-lg border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-blue-400 dark:border-slate-700"
+    >
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">⏱ Tempo de estudo</h3>
         <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs dark:bg-slate-800">
           <button
             onClick={() => trocarModo("livre")}
             className={`rounded-md px-2 py-1 ${
-              modo === "livre" ? "bg-white shadow dark:bg-slate-700" : "text-slate-500 dark:text-slate-400"
+              modo === "livre"
+                ? "bg-white shadow dark:bg-slate-700"
+                : "text-slate-500 dark:text-slate-400"
             }`}
           >
             Livre
@@ -102,7 +114,9 @@ export default function Cronometro({
           <button
             onClick={() => trocarModo("pomodoro")}
             className={`rounded-md px-2 py-1 ${
-              modo === "pomodoro" ? "bg-white shadow dark:bg-slate-700" : "text-slate-500 dark:text-slate-400"
+              modo === "pomodoro"
+                ? "bg-white shadow dark:bg-slate-700"
+                : "text-slate-500 dark:text-slate-400"
             }`}
           >
             Pomodoro
@@ -111,7 +125,9 @@ export default function Cronometro({
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="font-mono text-3xl font-bold tabular-nums">{formatar(segundos)}</span>
+        <span className="font-mono text-3xl font-bold tabular-nums">
+          {formatar(segundos)}
+        </span>
         {modo === "pomodoro" && (
           <span
             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -150,7 +166,9 @@ export default function Cronometro({
         </div>
       </div>
 
-      {msg && <p className="mt-2 text-xs text-green-600 dark:text-green-400">{msg}</p>}
+      {msg && (
+        <p className="mt-2 text-xs text-green-600 dark:text-green-400">{msg}</p>
+      )}
     </div>
   );
 }

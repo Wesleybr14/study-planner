@@ -19,12 +19,20 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 🎯 Metas/prazos com contagem de dias restantes
 - 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
 - 📝 **Anotações por tópico (editor tipo caderno)**: ferramentas para criar **títulos**, **tópicos em lista**, **tarefas** que ficam **riscadas ao concluir** (checkboxes clicáveis), **negrito**, **itálico**, **riscar** e **grifar**. Alterna entre **Editar** e **Visualizar**.
-- 🃏 Flashcards de revisão gerados por IA
+- 🃏 Flashcards de revisão gerados por IA — com **exportação em CSV** (compatível com Anki: `Frente,Verso`)
 - 🔁 Revisão espaçada (SM-2) — os cards voltam no intervalo ideal
 - ⏱ Cronômetro de estudo e Pomodoro (25/5)
-- 📊 Estatísticas: tempo estudado, sequência de dias (streak) e gráfico de 7 dias
+- 📊 Estatísticas: tempo estudado, sequência de dias (streak), gráfico de 7 dias, **tempo por roteiro** e **histórico de sessões** (inclui sessões livres)
 - ❓ Quiz de múltipla escolha gerado por IA
-- 🌙 Tema claro/escuro
+- 🔎 **Busca/filtro no painel** por título, descrição ou `#tag`
+- 🏷 **Tags nos roteiros** — organize e filtre seus roteiros (ex.: `#faculdade`, `#concurso`)
+- 📄 **Duplicar tópico** com um clique (copia anotações, flashcards e escolhas)
+- ↕️ **Reordenar tópicos** na lista (mover para cima/baixo)
+- 🎯 **Modo foco (Zen)** — esconde o menu para estudar sem distrações (tecla `F`)
+- ⌨️ **Atalhos de teclado** (`F` foco, `?` ajuda, `Esc` fechar, `Espaço` inicia/pausa o cronômetro quando ele está em foco)
+- ⬇️ **Exportar anotações** em Markdown (`.md`) e PDF
+- 💾 **Backup/Restore** — exporte e importe todos os seus dados em `.json` (página ⚙️ Ajustes)
+- 🌙 Tema claro/escuro/sistema
 - 🖥️ Layout responsivo: barra lateral no desktop e navegação inferior no celular
 
 ## 🛠️ Tecnologias
@@ -54,8 +62,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 No painel do Supabase, abra **SQL Editor > New query**, cole o conteúdo de
 `supabase-setup.sql` e clique em **Run**.
 Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql`
-(prazo), `supabase-migration-3.sql` (sessões de estudo) e `supabase-migration-4.sql`
-(arranjo do workspace em blocos).
+(prazo), `supabase-migration-3.sql` (sessões de estudo), `supabase-migration-4.sql`
+(arranjo do workspace em blocos) e `supabase-migration-5.sql` (tags nos roteiros).
 
 ### 3. Instalar e rodar
 
@@ -92,7 +100,7 @@ git push -u origin main
 
 ```
 study-planner/
-├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas)
+├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas, configuracoes)
 │   └── api/                # rotas: gemini, youtube, books, artigos, flashcards, quiz
 ├── components/             # AppShell, TopicoDrawer, WorkspaceBlocos, BottomNav, ThemeToggle, Cronometro
 │   └── blocos/             # blocos reutilizáveis: vídeo, livro, artigos, notas, flashcards, quiz
@@ -101,6 +109,7 @@ study-planner/
 ├── supabase-migration-2.sql# migração (prazo)
 ├── supabase-migration-3.sql# migração (sessões de estudo)
 ├── supabase-migration-4.sql# migração (arranjo do workspace em blocos)
+├── supabase-migration-5.sql# migração (tags nos roteiros)
 ├── .env.example            # modelo das variáveis
 └── .env.local              # suas chaves (NÃO vai pro Git)
 ```

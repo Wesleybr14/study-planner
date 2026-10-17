@@ -46,7 +46,9 @@ export default function FlashcardsBloco({
         return `"${frente}","${verso}"`;
       }),
     ];
-    const blob = new Blob([linhas.join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([linhas.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const slug = (topico?.titulo || "flashcards")

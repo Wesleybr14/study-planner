@@ -11,6 +11,7 @@ create table if not exists public.roteiros (
   topicos jsonb not null default '[]'::jsonb,
   progresso int not null default 0,
   prazo date,
+  tags text[] not null default '{}',
   criado_em timestamptz not null default now()
 );
 

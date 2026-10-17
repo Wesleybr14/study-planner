@@ -23,6 +23,7 @@ export default function Estatisticas() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [sessoes, setSessoes] = useState<any[]>([]);
+  const [roteiros, setRoteiros] = useState<any[]>([]);
   const [totais, setTotais] = useState({
     roteiros: 0,
     concluidos: 0,
@@ -38,11 +39,15 @@ export default function Estatisticas() {
     if (!auth.session) return router.replace("/login");
 
     const [{ data: s }, { data: r }] = await Promise.all([
-      supabase.from("sessoes").select("segundos, criado_em"),
-      supabase.from("roteiros").select("topicos"),
+      supabase
+        .from("sessoes")
+        .select("segundos, criado_em, roteiro_id, topico_index")
+        .order("criado_em", { ascending: false }),
+      supabase.from("roteiros").select("id, tema, topicos"),
     ]);
 
     setSessoes(s ?? []);
+    setRoteiros(r ?? []);
     const totalTopicos = (r ?? []).reduce(
       (a, x: any) => a + (x.topicos?.length ?? 0),
       0,
@@ -96,6 +101,28 @@ export default function Estatisticas() {
 
   const card =
     "rounded-xl bg-white p-4 shadow dark:border dark:border-slate-800 dark:bg-slate-900";
+
+  // Tempo por roteiro
+  const porRoteiro = roteiros
+    .map((r) => {
+      const seg = sessoes
+        .filter((s) => s.roteiro_id === r.id)
+        .reduce((a, s) => a + s.segundos, 0);
+      return { id: r.id, tema: r.tema, min: seg / 60 };
+    })
+    .filter((x) => x.min > 0)
+    .sort((a, b) => b.min - a.min);
+  const maxRoteiro = Math.max(1, ...porRoteiro.map((x) => x.min));
+
+  const historico = sessoes.slice(0, 15);
+
+  function nomeTopico(s: any): string {
+    if (!s.roteiro_id) return "Sessão livre";
+    const r = roteiros.find((x) => x.id === s.roteiro_id);
+    if (!r) return "Roteiro removido";
+    const t = r.topicos?.[s.topico_index];
+    return t ? `${r.tema} · ${t.titulo}` : r.tema;
+  }
 
   return (
     <AppShell>
@@ -171,6 +198,60 @@ export default function Estatisticas() {
             {totais.roteiros} {totais.roteiros === 1 ? "roteiro" : "roteiros"}{" "}
             de estudo
           </p>
+
+          {porRoteiro.length > 0 && (
+            <div className={`${card} mt-4`}>
+              <p className="mb-3 text-sm font-semibold">Tempo por roteiro</p>
+              <div className="space-y-2">
+                {porRoteiro.map((x) => (
+                  <div key={x.id}>
+                    <div className="flex justify-between text-xs">
+                      <span className="truncate pr-2">{x.tema}</span>
+                      <span className="shrink-0 text-slate-500 dark:text-slate-400">
+                        {formatarMinutos(x.min)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div
+                        className="h-2 rounded-full bg-purple-500"
+                        style={{ width: `${(x.min / maxRoteiro) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {historico.length > 0 && (
+            <div className={`${card} mt-4`}>
+              <p className="mb-3 text-sm font-semibold">Histórico de sessões</p>
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                {historico.map((s, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between gap-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate">{nomeTopico(s)}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {new Date(s.criado_em).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-medium text-blue-600 dark:text-blue-400">
+                      {formatarMinutos(s.segundos / 60)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </AppShell>

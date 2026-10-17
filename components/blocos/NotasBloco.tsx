@@ -243,7 +243,16 @@ export default function NotasBloco({
         em { font-style: italic; }
       </style>
     `;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo.replace(/</g, "&lt;")}</title>${estilo}</head><body><pre style="font-family: inherit; white-space: pre-wrap;">${nota.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/==([^=]+)==/g, "<mark>$1</mark>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\*([^*]+)\*/g, "<em>$1</em>").replace(/~~([^~]+)~~/g, "<s>$1</s>")}</pre><script>window.onload=()=>{setTimeout(()=>{window.print();window.close()},300)}</script></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo.replace(/</g, "&lt;")}</title>${estilo}</head><body><pre style="font-family: inherit; white-space: pre-wrap;">${nota
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(
+        /~~([^~]+)~~/g,
+        "<s>$1</s>",
+      )}</pre><script>window.onload=()=>{setTimeout(()=>{window.print();window.close()},300)}</script></body></html>`;
     w.document.write(html);
     w.document.close();
   }

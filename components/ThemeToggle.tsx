@@ -52,8 +52,13 @@ export default function ThemeToggle() {
   }
 
   const rotulo =
-    tema === "system" ? "Sistema (segue SO)" : tema === "dark" ? "Modo escuro" : "Modo claro";
-  const icone = tema === "system" ? (isDark ? "🌙" : "☀️") : tema === "dark" ? "🌙" : "☀️";
+    tema === "system"
+      ? "Sistema (segue SO)"
+      : tema === "dark"
+        ? "Modo escuro"
+        : "Modo claro";
+  const icone =
+    tema === "system" ? (isDark ? "🌙" : "☀️") : tema === "dark" ? "🌙" : "☀️";
 
   return (
     <button
