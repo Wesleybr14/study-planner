@@ -139,6 +139,7 @@ export default function TopicoDrawer({
             {painel(
               "notas",
               <NotasBloco
+                key={indice}
                 topico={topico}
                 indice={indice}
                 roteiroId={roteiroId}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
@@ -8,6 +8,7 @@ import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
 import AppShell from "@/components/AppShell";
 import TopicoDrawer from "@/components/TopicoDrawer";
 import WorkspaceBlocos from "@/components/WorkspaceBlocos";
+import { carregarArranjos, topicKey, type Arranjos } from "@/lib/layout";
 
 type Flashcard = { frente: string; verso: string };
 
@@ -32,10 +33,53 @@ export default function TemaPage() {
   const [expandido, setExpandido] = useState(false);
   const [verCronograma, setVerCronograma] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
+  const [arranjos, setArranjos] = useState<Arranjos | null>(null);
 
   useEffect(() => {
     carregar();
   }, [id]);
+
+  // Arranjos do workspace (para sinalizar quais tópicos têm arranjo próprio).
+  useEffect(() => {
+    let vivo = true;
+    carregarArranjos().then((a) => vivo && setArranjos(a));
+    return () => {
+      vivo = false;
+    };
+  }, [id]);
+
+  /** Tópico com arranjo próprio (editou à mão ou aplicou um arranjo só pra ele). */
+  function temArranjoProprio(i: number): boolean {
+    return !!arranjos?.trabalho[topicKey(id, i)];
+  }
+
+  // Ao fechar o workspace, recarrega os arranjos para atualizar os marcadores.
+  const workspaceAberto = useRef(false);
+  useEffect(() => {
+    if (expandido) {
+      workspaceAberto.current = true;
+      return;
+    }
+    if (workspaceAberto.current) {
+      workspaceAberto.current = false;
+      carregarArranjosDoUsuario();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandido]);
+
+  /** Nome do arranjo escolhido para o tópico, quando houver. */
+  function nomeArranjo(i: number): string | null {
+    if (!arranjos) return null;
+    const k = topicKey(id, i);
+    const esc = arranjos.escolha[k];
+    if (!esc || esc === "custom") return null;
+    if (esc.startsWith("preset:")) return esc.slice("preset:".length);
+    return arranjos.salvos.find((s) => s.id === esc)?.nome ?? null;
+  }
+
+  async function carregarArranjosDoUsuario() {
+    setArranjos(await carregarArranjos());
+  }
 
   async function carregar() {
     const { data } = await supabase
@@ -304,6 +348,16 @@ export default function TemaPage() {
                     {t.flashcards?.length
                       ? ` · 🃏 ${t.flashcards.length} flashcards`
                       : ""}
+                    {temArranjoProprio(i) && (
+                      <span
+                        title={`Arranjo do workspace: ${
+                          nomeArranjo(i) ?? "personalizado"
+                        }`}
+                        className="ml-1 inline-block rounded-full bg-violet-100 px-1.5 py-px text-violet-700 dark:bg-violet-900/50 dark:text-violet-300"
+                      >
+                        🧩 {nomeArranjo(i) ?? "arranjo próprio"}
+                      </span>
+                    )}
                     <span className="ml-1 text-blue-500 dark:text-blue-400">
                       · abrir →
                     </span>

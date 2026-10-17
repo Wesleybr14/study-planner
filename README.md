@@ -13,12 +13,12 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 🔬 Artigos científicos gratuitos (arXiv, Europe PMC, DOAJ) com resumo e PDF
 - 🗂️ **Painel lateral por tópico**: reúne vídeos, livros, artigos, anotações, flashcards e quiz sem sair da página
 - 🧩 **Workspace em blocos** (estilo _snap_): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, notas, flashcards e quiz **arrastando e redimensionando** livremente, ou escolhendo um **layout pronto**. Dentro de cada bloco dá para **trocar qual vídeo/livro/artigo aparece** e **ocultar** blocos que você não quer ver (e mostrá-los de novo depois).
-- 💾 **Arranjos por tópico**: cada tópico guarda o seu próprio arranjo (edite à mão ou aplique um layout pronto). Você também pode **salvar arranjos com um nome** na sua biblioteca e escolher, no seletor _Arranjo_, qual usar em cada tópico ("situação"). O botão **📌 Aplicar a todos** replica o arranjo atual para **todos os tópicos** de uma vez. Tudo fica salvo **na nuvem** (coluna `preferencias.layout`)
+- 💾 **Arranjos por tópico**: cada tópico guarda o seu próprio arranjo (edite à mão ou aplique um layout pronto). Você também pode **salvar arranjos com um nome** na sua biblioteca e escolher, no seletor _Arranjo_, qual usar em cada tópico ("situação"). O botão **📌 Aplicar a todos** replica o arranjo atual para **todos os tópicos** de uma vez. Os tópicos com arranjo próprio ganham um indicador **🧩** na lista. Tudo fica salvo **na nuvem** (coluna `preferencias.layout`)
 - 🔄 Botão para regenerar as buscas de vídeos/livros/artigos de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
 - 🎯 Metas/prazos com contagem de dias restantes
 - 📅 Cronograma automático (distribui os tópicos pelos dias até a meta)
-- 📝 Anotações pessoais por tópico
+- 📝 **Anotações por tópico (editor tipo caderno)**: ferramentas para criar **títulos**, **tópicos em lista**, **tarefas** que ficam **riscadas ao concluir** (checkboxes clicáveis), **negrito**, **itálico**, **riscar** e **grifar**. Alterna entre **Editar** e **Visualizar**.
 - 🃏 Flashcards de revisão gerados por IA
 - 🔁 Revisão espaçada (SM-2) — os cards voltam no intervalo ideal
 - ⏱ Cronômetro de estudo e Pomodoro (25/5)

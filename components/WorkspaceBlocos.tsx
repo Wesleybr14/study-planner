@@ -337,6 +337,7 @@ export default function WorkspaceBlocos({
       case "notas":
         return (
           <NotasBloco
+            key={indice}
             topico={topico}
             indice={indice}
             roteiroId={roteiroId}
