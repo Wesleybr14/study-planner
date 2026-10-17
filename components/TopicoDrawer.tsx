@@ -49,6 +49,7 @@ export default function TopicoDrawer({
     if (aberto) setAba("videos");
   }, [aberto, indice]);
 
+
   // Esc fecha; trava o scroll do fundo enquanto aberto.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -63,6 +64,21 @@ export default function TopicoDrawer({
       document.body.style.overflow = "";
     };
   }, [aberto, onFechar]);
+
+  function duplicar() {
+    if (!topico) return;
+    const copia = {
+      ...topico,
+      titulo: `${topico.titulo} (cópia)`,
+      nota: topico.nota ?? "",
+      flashcards: Array.isArray(topico.flashcards) ? topico.flashcards.map((f: any) => ({ ...f })) : [],
+      videosEscolhidos: Array.isArray(topico.videosEscolhidos) ? [...topico.videosEscolhidos] : [],
+      livrosEscolhidos: Array.isArray(topico.livrosEscolhidos) ? [...topico.livrosEscolhidos] : [],
+      artigosEscolhidos: Array.isArray(topico.artigosEscolhidos) ? [...topico.artigosEscolhidos] : [],
+    };
+    onSalvarTopico({ _duplicarApos: true, _copia: copia } as any);
+    onFechar();
+  }
 
   const painel = (id: Aba, conteudo: React.ReactNode) => (
     <div className={aba === id ? "" : "hidden"}>{conteudo}</div>
@@ -100,6 +116,13 @@ export default function TopicoDrawer({
               className="rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               ⛶ Expandir
+            </button>
+            <button
+              onClick={duplicar}
+              title="Duplicar tópico"
+              className="rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              📄 Duplicar
             </button>
             <button
               onClick={onFechar}

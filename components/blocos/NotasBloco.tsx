@@ -204,6 +204,50 @@ export default function NotasBloco({
     guardar(alternarTarefa(nota, linha));
   }
 
+  function exportarMarkdown() {
+    if (!nota.trim()) return;
+    const blob = new Blob([nota], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const slug = (topico?.titulo || `anotacoes-${indice}`)
+      .toString()
+      .normalize("NFD")
+      .replace(/[^\w\s.-]/g, "")
+      .replace(/\s+/g, "-")
+      .toLowerCase()
+      .slice(0, 40);
+    a.href = url;
+    a.download = `anotacoes-${slug}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportarPDF() {
+    if (!nota.trim()) return;
+    const w = window.open("", "_blank", "width=800,height=600");
+    if (!w) return;
+    const titulo = (topico?.titulo || "Anotações") as string;
+    const estilo = `
+      <style>
+        body { font-family: system-ui, -apple-system, Inter, sans-serif; margin: 40px; line-height: 1.7; color: #111827; white-space: pre-wrap; word-wrap: break-word; }
+        h1,h2,h3 { margin-top: 1.5rem; margin-bottom: .5rem; }
+        ul,ol { margin-left: 2rem; }
+        li { margin: .25rem 0; }
+        blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; color: #4b5563; }
+        hr { margin: 2rem 0; border: 0; border-top: 1px solid #e5e7eb; }
+        mark { background: #fef08a; padding: 0 2px; }
+        s { opacity: .6; }
+        strong { font-weight: 700; }
+        em { font-style: italic; }
+      </style>
+    `;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo.replace(/</g, "&lt;")}</title>${estilo}</head><body><pre style="font-family: inherit; white-space: pre-wrap;">${nota.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/==([^=]+)==/g, "<mark>$1</mark>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\*([^*]+)\*/g, "<em>$1</em>").replace(/~~([^~]+)~~/g, "<s>$1</s>")}</pre><script>window.onload=()=>{setTimeout(()=>{window.print();window.close()},300)}</script></body></html>`;
+    w.document.write(html);
+    w.document.close();
+  }
+
   const btn =
     "h-6 min-w-6 rounded border border-slate-200 px-1.5 text-xs leading-none hover:bg-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-slate-700 dark:hover:bg-slate-800";
 
@@ -300,6 +344,26 @@ export default function NotasBloco({
           >
             {modo === "editar" ? "👁 Visualizar" : "✏️ Editar"}
           </button>
+          {modo === "ver" && nota.trim() && (
+            <>
+              <button
+                type="button"
+                onClick={exportarMarkdown}
+                title="Exportar anotações como Markdown (.md)"
+                className={btn}
+              >
+                ⬇️ .md
+              </button>
+              <button
+                type="button"
+                onClick={exportarPDF}
+                title="Exportar anotações como PDF (.pdf)"
+                className={btn}
+              >
+                ⬇️ PDF
+              </button>
+            </>
+          )}
         </div>
 
         {modo === "editar" ? (

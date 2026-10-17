@@ -117,6 +117,18 @@ export default function TemaPage() {
   // Aplica alterações em um único tópico (usado pelo drawer).
   function salvarTopico(patch: Record<string, any>) {
     if (aberto === null) return;
+
+    if ((patch as any)._duplicarApos) {
+      const copia = (patch as any)._copia;
+      const idx = aberto;
+      const topicos = [...roteiro.topicos];
+      topicos.splice(idx + 1, 0, copia);
+      salvarTopicos(topicos);
+      setAberto(idx + 1);
+      setExpandido(false);
+      return;
+    }
+
     const topicos = roteiro.topicos.map((t: any, idx: number) =>
       idx === aberto ? { ...t, ...patch } : t,
     );

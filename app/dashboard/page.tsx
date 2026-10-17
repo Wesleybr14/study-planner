@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [gerando, setGerando] = useState(false);
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [erro, setErro] = useState("");
+  const [filtro, setFiltro] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -108,6 +109,15 @@ export default function Dashboard() {
     0,
   );
 
+  const roteirosFiltrados = roteiros.filter((r) => {
+    const q = filtro.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (r.tema || "").toLowerCase().includes(q) ||
+      (r.descricao || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <AppShell>
       <header className="mb-6">
@@ -173,14 +183,29 @@ export default function Dashboard() {
           {erro && <p className="mt-2 text-sm text-red-500">{erro}</p>}
         </form>
 
-        <section className="lg:col-span-2">
+        <section className="lg:col-span-2 space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold">Seus roteiros</h2>
+            {roteiros.length > 0 && (
+              <input
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                placeholder="Buscar por título ou descrição..."
+                className="w-full sm:w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800"
+              />
+            )}
+          </div>
           {roteiros.length === 0 ? (
             <p className="rounded-xl bg-white p-8 text-center text-slate-400 shadow dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
               Nenhum roteiro ainda. Crie o primeiro ao lado!
             </p>
+          ) : roteirosFiltrados.length === 0 ? (
+            <p className="rounded-xl bg-white p-6 text-center text-slate-400 shadow dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
+              Nenhum roteiro encontrado para "{filtro}".
+            </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {roteiros.map((r) => (
+              {roteirosFiltrados.map((r) => (
                 <button
                   key={r.id}
                   onClick={() => router.push(`/tema/${r.id}`)}
