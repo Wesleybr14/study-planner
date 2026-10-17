@@ -170,6 +170,22 @@ export default function TemaPage() {
     }
   }
 
+  function mover(atual: number, destino: number) {
+    if (destino < 0 || destino >= roteiro.topicos.length) return;
+    const topicos = [...roteiro.topicos];
+    const [item] = topicos.splice(atual, 1);
+    topicos.splice(destino, 0, item);
+    salvarTopicos(topicos);
+    setConcluidos((c) => {
+      const novo = [...c];
+      const [v] = novo.splice(atual, 1);
+      novo.splice(destino, 0, v);
+      return novo;
+    });
+    if (aberto === atual) setAberto(destino);
+    else if (aberto === destino) setAberto(atual);
+  }
+
   if (!roteiro) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -374,6 +390,26 @@ export default function TemaPage() {
                       · abrir →
                     </span>
                   </p>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); mover(i, i-1); }}
+                      disabled={i === 0}
+                      title="Mover para cima"
+                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); mover(i, i+1); }}
+                      disabled={i === roteiro.topicos.length - 1}
+                      title="Mover para baixo"
+                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                    >
+                      ↓
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
