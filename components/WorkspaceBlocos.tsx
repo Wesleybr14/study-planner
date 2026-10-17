@@ -5,14 +5,18 @@ import {
   ALTURA_LINHA,
   COLUNAS,
   ESPACO,
-  LAYOUT_PADRAO,
   PRESETS,
   TIPOS,
   TIPOS_ORDEM,
+  blocosDoArranjo,
   cabe,
-  carregarLayout,
-  normalizarLayout,
-  salvarLayout,
+  carregarArranjos,
+  normalizarArranjos,
+  novoIdArranjo,
+  presetId,
+  salvarArranjos,
+  topicKey,
+  type Arranjos,
   type Bloco,
   type TipoBloco,
 } from "@/lib/layout";
@@ -37,7 +41,8 @@ type Arrasto = {
 /**
  * Workspace em blocos (estilo "snap"): os recursos do tópico ficam em blocos
  * que podem ser movidos e redimensionados livremente, ou reorganizados por
- * layouts prontos. O arranjo é salvo na nuvem (único para todos os tópicos).
+ * arranjos prontos/salvos. O usuário pode salvar arranjos nomeados e escolher
+ * qual usar em cada tópico; tudo fica salvo na nuvem.
  */
 export default function WorkspaceBlocos({
   topico,
@@ -52,7 +57,9 @@ export default function WorkspaceBlocos({
   onFechar: () => void;
   onSalvarTopico: (patch: Record<string, any>) => void;
 }) {
-  const [layout, setLayout] = useState<Bloco[] | null>(null);
+  const chave = topicKey(roteiroId, indice);
+
+  const [arranjos, setArranjos] = useState<Arranjos | null>(null);
   const [ativo, setAtivo] = useState<TipoBloco | null>(null);
   const [preview, setPreview] = useState<Bloco | null>(null);
   const [largura, setLargura] = useState(0);
@@ -64,27 +71,31 @@ export default function WorkspaceBlocos({
   const layoutRef = useRef<Bloco[] | null>(null);
   const primeiraCarga = useRef(true);
 
-  // Carrega o arranjo salvo (ou usa o padrão).
+  // Carrega os arranjos salvos (ou usa o padrão).
   useEffect(() => {
     let vivo = true;
-    carregarLayout().then(
-      (l) => vivo && setLayout(l ?? normalizarLayout(null)),
+    carregarArranjos().then(
+      (a) => vivo && setArranjos(a ?? normalizarArranjos(null)),
     );
     return () => {
       vivo = false;
     };
   }, []);
 
-  // Salva o arranjo (com um pequeno atraso) sempre que ele mudar.
+  const layout = arranjos
+    ? (arranjos.trabalho[chave] ?? arranjos.padrao)
+    : null;
+
+  // Salva os arranjos (com um pequeno atraso) sempre que mudarem.
   useEffect(() => {
-    if (!layout) return;
+    if (!arranjos) return;
     if (primeiraCarga.current) {
       primeiraCarga.current = false;
       return;
     }
-    const t = setTimeout(() => salvarLayout(layout), 700);
+    const t = setTimeout(() => salvarArranjos(arranjos), 700);
     return () => clearTimeout(t);
-  }, [layout]);
+  }, [arranjos]);
 
   // Detecta o celular (uma vez no mount).
   useEffect(() => {
@@ -95,8 +106,7 @@ export default function WorkspaceBlocos({
     return () => mq.removeEventListener("change", atualiza);
   }, []);
 
-  // Mede a largura da área da grade. Roda quando a grade passa a existir
-  // (depois do layout carregar), senão o ref ainda não estaria no DOM.
+  // Mede a largura da área da grade. Roda quando a grade passa a existir.
   const gradeVisivel = layout !== null && !ehMobile;
   useEffect(() => {
     if (!gradeVisivel) return;
@@ -112,10 +122,26 @@ export default function WorkspaceBlocos({
   const passoX = colW + ESPACO;
   const passoY = ALTURA_LINHA + ESPACO;
 
-  // Mantém uma referência sempre atual do layout (evita closures desatualizadas).
+  // Mantém uma referência atual do layout (evita closures desatualizadas).
   useEffect(() => {
     layoutRef.current = layout;
   }, [layout]);
+
+  /** Aplica um layout ao tópico atual (edição à mão). */
+  function definirLayout(blocos: Bloco[], marcaEscolha = true) {
+    setArranjos((a) =>
+      a
+        ? {
+            ...a,
+            padrao: blocos,
+            trabalho: { ...a.trabalho, [chave]: blocos },
+            escolha: marcaEscolha
+              ? { ...a.escolha, [chave]: "custom" }
+              : a.escolha,
+          }
+        : a,
+    );
+  }
 
   // Durante o arrasto só mexemos na pré-visualização — o layout "de verdade"
   // muda apenas ao soltar, e só se a posição não sobrepuser outro bloco.
@@ -151,7 +177,17 @@ export default function WorkspaceBlocos({
     const p = previewRef.current;
     const atual = layoutRef.current;
     if (d && p && atual && cabe(atual, p)) {
-      setLayout(atual.map((b) => (b.id === d.id ? p : b)));
+      const blocos = atual.map((b) => (b.id === d.id ? p : b));
+      setArranjos((a) =>
+        a
+          ? {
+              ...a,
+              padrao: blocos,
+              trabalho: { ...a.trabalho, [chave]: blocos },
+              escolha: { ...a.escolha, [chave]: "custom" },
+            }
+          : a,
+      );
     }
     arrasto.current = null;
     previewRef.current = null;
@@ -159,7 +195,7 @@ export default function WorkspaceBlocos({
     setAtivo(null);
     window.removeEventListener("pointermove", aoMover);
     window.removeEventListener("pointerup", aoSoltar);
-  }, [aoMover]);
+  }, [aoMover, chave]);
 
   function iniciar(
     e: React.PointerEvent,
@@ -192,23 +228,67 @@ export default function WorkspaceBlocos({
     [aoMover, aoSoltar],
   );
 
-  function aplicarPreset(preset: Bloco[]) {
-    setLayout(normalizarLayout(preset));
+  /** Aplica um arranjo (pronto ou salvo) ao tópico atual. */
+  function aplicar(id: string) {
+    if (id === "custom" || !arranjos) return;
+    const blocos = blocosDoArranjo(arranjos, id);
+    if (!blocos) return;
+    setArranjos((a) =>
+      a
+        ? {
+            ...a,
+            trabalho: { ...a.trabalho, [chave]: blocos },
+            escolha: { ...a.escolha, [chave]: id },
+          }
+        : a,
+    );
+  }
+
+  /** Salva o arranjo atual da tópico como um arranjo nomeado. */
+  function salvarArranjo() {
+    if (!arranjos || !layout) return;
+    const sugerido = `Arranjo ${arranjos.salvos.length + 1}`;
+    const nome = prompt("Nome do arranjo:", sugerido);
+    if (!nome || !nome.trim()) return;
+    const novo = {
+      id: novoIdArranjo(),
+      nome: nome.trim(),
+      blocos: layout.map((b) => ({ ...b })),
+    };
+    setArranjos((a) =>
+      a
+        ? {
+            ...a,
+            salvos: [...a.salvos, novo],
+            escolha: { ...a.escolha, [chave]: novo.id },
+          }
+        : a,
+    );
+  }
+
+  function excluirArranjo(id: string) {
+    if (!id || id === "custom" || id.startsWith("preset:")) return;
+    if (!confirm("Excluir este arranjo salvo?")) return;
+    setArranjos((a) => {
+      if (!a) return a;
+      const escolha: Record<string, string> = {};
+      for (const [k, v] of Object.entries(a.escolha))
+        escolha[k] = v === id ? "custom" : v;
+      return { ...a, salvos: a.salvos.filter((s) => s.id !== id), escolha };
+    });
   }
 
   function ocultar(id: TipoBloco) {
-    setLayout((atual) =>
-      atual
-        ? atual.map((b) => (b.id === id ? { ...b, oculto: true } : b))
-        : atual,
+    if (!layout) return;
+    definirLayout(
+      layout.map((b) => (b.id === id ? { ...b, oculto: true } : b)),
     );
   }
 
   function mostrar(id: TipoBloco) {
-    setLayout((atual) =>
-      atual
-        ? atual.map((b) => (b.id === id ? { ...b, oculto: false } : b))
-        : atual,
+    if (!layout) return;
+    definirLayout(
+      layout.map((b) => (b.id === id ? { ...b, oculto: false } : b)),
     );
   }
 
@@ -238,6 +318,10 @@ export default function WorkspaceBlocos({
     }
   }
 
+  const escolhaAtual = arranjos?.escolha[chave] ?? "custom";
+  const podeExcluir =
+    escolhaAtual !== "custom" && !escolhaAtual.startsWith("preset:");
+
   const visiveis = layout ? layout.filter((b) => !b.oculto) : [];
   const ocultos = layout ? layout.filter((b) => b.oculto) : [];
   const linhas = visiveis.length
@@ -247,7 +331,7 @@ export default function WorkspaceBlocos({
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-slate-100 dark:bg-slate-950">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900">
         <div className="min-w-0">
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Workspace em blocos · Tópico {indice + 1}
@@ -256,21 +340,46 @@ export default function WorkspaceBlocos({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {PRESETS.map((p) => (
-            <button
-              key={p.nome}
-              onClick={() => aplicarPreset(p.layout)}
-              className="rounded-lg border border-slate-300 px-2 py-1 font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              {p.nome}
-            </button>
-          ))}
+          <select
+            value={escolhaAtual}
+            onChange={(e) => aplicar(e.target.value)}
+            title="Escolher o arranjo deste tópico"
+            className="max-w-[16rem] rounded-lg border border-slate-300 bg-white px-2 py-1 font-medium outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
+            <option value="custom">Personalizado</option>
+            <optgroup label="Prontos">
+              {PRESETS.map((p) => (
+                <option key={p.nome} value={presetId(p.nome)}>
+                  {p.nome}
+                </option>
+              ))}
+            </optgroup>
+            {arranjos && arranjos.salvos.length > 0 && (
+              <optgroup label="Meus arranjos">
+                {arranjos.salvos.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
           <button
-            onClick={() => setLayout(LAYOUT_PADRAO.map((b) => ({ ...b })))}
+            onClick={salvarArranjo}
+            title="Salvar o arranjo atual com um nome"
             className="rounded-lg border border-slate-300 px-2 py-1 font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
           >
-            ↺ Padrão
+            💾 Salvar arranjo
           </button>
+          {podeExcluir && (
+            <button
+              onClick={() => excluirArranjo(escolhaAtual)}
+              title="Excluir este arranjo salvo"
+              className="rounded-lg border border-slate-300 px-2 py-1 font-medium text-red-600 hover:bg-red-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-red-900/30"
+            >
+              🗑 Excluir
+            </button>
+          )}
         </div>
 
         {ocultos.length > 0 && (
@@ -297,7 +406,7 @@ export default function WorkspaceBlocos({
         </button>
       </header>
 
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto p-2">
         {!layout ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Carregando arranjo...
@@ -361,7 +470,7 @@ export default function WorkspaceBlocos({
                     <header
                       onPointerDown={(e) => iniciar(e, b, "mover")}
                       style={{ touchAction: "none" }}
-                      className="flex cursor-grab items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 select-none active:cursor-grabbing dark:border-slate-800 dark:bg-slate-800/60"
+                      className="flex cursor-grab items-center gap-2 border-b border-slate-200 bg-slate-50 px-2.5 py-1.5 select-none active:cursor-grabbing dark:border-slate-800 dark:bg-slate-800/60"
                     >
                       <span className="text-sm font-semibold">
                         {TIPOS[b.id].icone} {TIPOS[b.id].rotulo}
@@ -379,7 +488,7 @@ export default function WorkspaceBlocos({
                       </button>
                     </header>
 
-                    <div className="min-h-0 flex-1 overflow-auto p-3">
+                    <div className="min-h-0 flex-1 overflow-auto p-2">
                       {conteudo(b.id)}
                     </div>
 

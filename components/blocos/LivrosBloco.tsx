@@ -119,17 +119,19 @@ export default function LivrosBloco({
       </p>
     );
 
-  // Modo compacto (workspace): escolhe o livro e mostra só ele.
+  // Modo compacto (workspace): escolhe o livro e deixa a leitura ocupar o bloco.
   if (compacto) {
     const l = livros[sel ?? 0];
     const embed = l ? embedLivro(l) : null;
+    const varios = livros.length > 1;
     return (
-      <div className="flex h-full flex-col gap-2">
+      <div className="flex h-full flex-col gap-1.5">
         <div className="flex shrink-0 items-center gap-2">
-          {livros.length > 1 && (
+          {varios ? (
             <select
               value={sel ?? 0}
               onChange={(e) => setSel(Number(e.target.value))}
+              title="Trocar de livro"
               className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {livros.map((ll: any, k: number) => (
@@ -138,6 +140,10 @@ export default function LivrosBloco({
                 </option>
               ))}
             </select>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-500 dark:text-slate-400">
+              {l?.titulo}
+            </span>
           )}
           {filtroGratis}
         </div>
@@ -148,15 +154,32 @@ export default function LivrosBloco({
           </p>
         ) : (
           <>
-            <div className="flex shrink-0 gap-3">
-              {capa(l)}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{l.titulo}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {l.autores}
-                </p>
-                {links(l)}
-              </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs">
+              <span className={estiloAcesso(l.acesso)}>
+                {ROTULO_ACESSO[l.acesso] ?? ""}
+              </span>
+              {l.pdf && (
+                <a
+                  href={l.pdf}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-green-600 hover:underline dark:text-green-400"
+                >
+                  📥 PDF
+                </a>
+              )}
+              <a
+                href={l.url}
+                target="_blank"
+                rel="noreferrer"
+                title="Ver no site"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+              >
+                ↗
+              </a>
+              <span className="min-w-0 flex-1 truncate text-slate-400 dark:text-slate-500">
+                {l.autores}
+              </span>
             </div>
             {embed ? (
               <iframe
@@ -166,9 +189,17 @@ export default function LivrosBloco({
                 className="min-h-0 w-full flex-1 rounded-lg border border-slate-200 dark:border-slate-700"
               />
             ) : (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Sem leitura embutida — use os links acima.
-              </p>
+              <div className="min-h-0 flex-1 overflow-auto">
+                <div className="flex gap-3">
+                  {capa(l)}
+                  <p className="min-w-0 flex-1 text-xs text-slate-500 dark:text-slate-400">
+                    {l.autores}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                  Sem leitura embutida — use os links acima.
+                </p>
+              </div>
             )}
           </>
         )}

@@ -1,6 +1,10 @@
 // Modelo do "workspace em blocos": uma grade de 12 colunas onde cada bloco
 // (vídeo, livro, artigos, notas, flashcards, quiz) pode ser movido e
-// redimensionado pelo usuário. O arranjo é único por usuário e fica na nuvem.
+// redimensionado pelo usuário.
+//
+// Arranjos: além do layout padrão, o usuário pode salvar arranjos nomeados
+// (biblioteca) e escolher qual usar em cada tópico ("situação"). Tudo fica na
+// nuvem, na coluna `preferencias.layout` (jsonb).
 
 import { supabase } from "@/lib/supabase";
 
@@ -17,6 +21,15 @@ export type Bloco = {
 };
 
 export type Layout = Bloco[];
+
+export type ArranjoSalvo = { id: string; nome: string; blocos: Layout };
+
+export type Arranjos = {
+  padrao: Layout; // usado em tópicos sem arranjo próprio
+  trabalho: Record<string, Layout>; // arranjo por tópico (chave = roteiroId:indice)
+  escolha: Record<string, string>; // arranjo escolhido por tópico ("custom" = editado à mão)
+  salvos: ArranjoSalvo[]; // biblioteca de arranjos nomeados
+};
 
 export const COLUNAS = 12;
 export const ALTURA_LINHA = 44; // px por linha da grade
@@ -49,14 +62,15 @@ const num = (v: unknown, def: number) =>
 // Layout inicial: vídeo grande em cima à esquerda, livro em modo retrato à
 // direita, quiz e notas logo abaixo — aproveitando a largura da tela.
 export const LAYOUT_PADRAO: Layout = [
-  { id: "video", x: 0, y: 0, w: 8, h: 8 },
-  { id: "livro", x: 8, y: 0, w: 4, h: 12 },
-  { id: "quiz", x: 0, y: 8, w: 4, h: 5 },
-  { id: "notas", x: 4, y: 8, w: 4, h: 5 },
-  { id: "artigos", x: 8, y: 12, w: 4, h: 6 },
-  { id: "flashcards", x: 0, y: 13, w: 8, h: 5 },
+  { id: "video", x: 0, y: 0, w: 8, h: 9 },
+  { id: "livro", x: 8, y: 0, w: 4, h: 11 },
+  { id: "quiz", x: 0, y: 9, w: 4, h: 5 },
+  { id: "notas", x: 4, y: 9, w: 4, h: 5 },
+  { id: "artigos", x: 8, y: 11, w: 4, h: 5 },
+  { id: "flashcards", x: 0, y: 14, w: 8, h: 4 },
 ];
 
+// Arranjos prontos (não entram na biblioteca do usuário).
 export const PRESETS: { nome: string; layout: Layout }[] = [
   {
     nome: "Vídeo + lateral",
@@ -82,6 +96,17 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "artigos", x: 0, y: 15, w: 6, h: 6 },
       { id: "quiz", x: 6, y: 15, w: 6, h: 6 },
       { id: "flashcards", x: 0, y: 21, w: 12, h: 4 },
+    ],
+  },
+  {
+    nome: "Leitura (livro grande)",
+    layout: [
+      { id: "livro", x: 0, y: 0, w: 7, h: 14 },
+      { id: "video", x: 7, y: 0, w: 5, h: 7 },
+      { id: "artigos", x: 7, y: 7, w: 5, h: 7 },
+      { id: "notas", x: 0, y: 14, w: 7, h: 6 },
+      { id: "quiz", x: 7, y: 14, w: 5, h: 6 },
+      { id: "flashcards", x: 0, y: 20, w: 12, h: 4 },
     ],
   },
   {
@@ -143,9 +168,93 @@ export function normalizarLayout(entrada: unknown): Layout {
   return lista;
 }
 
-// ---------- Persistência (nuvem, um arranjo por usuário) ----------
+// ---------- Arranjos ----------
 
-export async function carregarLayout(): Promise<Layout | null> {
+/** Chave de um tópico dentro de um roteiro. */
+export function topicKey(roteiroId: string, indice: number): string {
+  return `${roteiroId}:${indice}`;
+}
+
+/** Id de um arranjo pronto (preset). */
+export function presetId(nome: string): string {
+  return `preset:${nome}`;
+}
+
+/** Gera um id único para um arranjo salvo. */
+export function novoIdArranjo(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return crypto.randomUUID();
+  return `a${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+}
+
+/** Blocos de um arranjo (preset ou salvo). */
+export function blocosDoArranjo(
+  arranjos: Arranjos | null,
+  id: string,
+): Layout | null {
+  if (id.startsWith("preset:")) {
+    const nome = id.slice("preset:".length);
+    const p = PRESETS.find((p) => p.nome === nome);
+    return p ? p.layout.map((b) => ({ ...b })) : null;
+  }
+  const s = arranjos?.salvos.find((s) => s.id === id);
+  return s ? s.blocos.map((b) => ({ ...b })) : null;
+}
+
+const layoutDe = (v: unknown): Layout | null =>
+  v == null ? null : normalizarLayout(v);
+
+export function normalizarArranjos(entrada: unknown): Arranjos {
+  const base: Arranjos = {
+    padrao: LAYOUT_PADRAO.map((b) => ({ ...b })),
+    trabalho: {},
+    escolha: {},
+    salvos: [],
+  };
+
+  // Formato antigo: a coluna guardava apenas um array (layout único).
+  if (Array.isArray(entrada))
+    return { ...base, padrao: normalizarLayout(entrada) };
+
+  if (!entrada || typeof entrada !== "object") return base;
+  const e = entrada as any;
+
+  const salvos: ArranjoSalvo[] = Array.isArray(e.salvos)
+    ? e.salvos
+        .filter(
+          (s: any) =>
+            s && typeof s.id === "string" && typeof s.nome === "string",
+        )
+        .map((s: any) => ({
+          id: s.id,
+          nome: s.nome,
+          blocos: normalizarLayout(s.blocos),
+        }))
+    : [];
+
+  const trabalho: Record<string, Layout> = {};
+  if (e.trabalho && typeof e.trabalho === "object")
+    for (const [k, v] of Object.entries(e.trabalho)) {
+      const l = layoutDe(v);
+      if (l) trabalho[k] = l;
+    }
+
+  const escolha: Record<string, string> = {};
+  if (e.escolha && typeof e.escolha === "object")
+    for (const [k, v] of Object.entries(e.escolha))
+      if (typeof v === "string") escolha[k] = v;
+
+  return {
+    padrao: layoutDe(e.padrao) ?? base.padrao,
+    trabalho,
+    escolha,
+    salvos,
+  };
+}
+
+// ---------- Persistência (nuvem, por usuário) ----------
+
+export async function carregarArranjos(): Promise<Arranjos | null> {
   const { data: auth } = await supabase.auth.getSession();
   const uid = auth.session?.user.id;
   if (!uid) return null;
@@ -156,17 +265,17 @@ export async function carregarLayout(): Promise<Layout | null> {
     .eq("user_id", uid)
     .maybeSingle();
 
-  return data?.layout ? normalizarLayout(data.layout) : null;
+  return data?.layout ? normalizarArranjos(data.layout) : null;
 }
 
-export async function salvarLayout(layout: Layout): Promise<void> {
+export async function salvarArranjos(arranjos: Arranjos): Promise<void> {
   const { data: auth } = await supabase.auth.getSession();
   const uid = auth.session?.user.id;
   if (!uid) return;
 
   await supabase.from("preferencias").upsert({
     user_id: uid,
-    layout,
+    layout: arranjos,
     atualizado_em: new Date().toISOString(),
   });
 }
