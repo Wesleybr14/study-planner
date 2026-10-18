@@ -445,31 +445,137 @@ export default function WorkspaceBlocos({
   }
 
   /**
-   * Reorganiza todos os blocos numa grade compacta, sem sobreposições nem
-   * buracos verticais: para cada bloco (na ordem atual de cima para baixo),
-   * procura a posição mais acima possível, usando a "altura" já ocupada por
-   * cada coluna (empacotamento tipo skyline).
+   * Reorganiza TODOS os blocos numa grade 12×H **sem lacunas**: em vez de só
+   * reposicionar, ajusta a altura/largura de cada bloco para que eles preencham
+   * o retângulo inteiro (empacotamento tipo "treemap", com divisões
+   * proporcionais à área atual de cada bloco).
+   *
+   * Como o layout persistido exige altura mínima de 2 linhas, tentamos alturas
+   * cada vez maiores até nenhum bloco ficar fino demais. Em último caso (nunca
+   * deve acontecer na prática), caímos num reposicionamento simples por
+   * "skyline", que ao menos evita sobreposição.
    */
   function encaixarTodos() {
     if (!layout) return;
-    const ordem = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
-    const alturas = new Array(COLUNAS).fill(0);
-    const novos: Bloco[] = [];
+    const visiveis = layout.filter((b) => !b.oculto);
+    const ocultos = layout.filter((b) => b.oculto);
 
-    for (const b of ordem) {
-      const w = clamp(b.w, 1, COLUNAS);
-      let melhorX = 0;
-      let melhorY = Infinity;
-      for (let x = 0; x + w <= COLUNAS; x++) {
-        let y = 0;
-        for (let c = x; c < x + w; c++) y = Math.max(y, alturas[c]);
-        if (y < melhorY) {
-          melhorY = y;
-          melhorX = x;
+    // Com 0 ou 1 bloco visível não há lacunas a corrigir — não redimensiona.
+    if (visiveis.length < 2) return;
+
+    const areaTotal = visiveis.reduce((a, b) => a + b.w * b.h, 0) || 1;
+    const pesos = visiveis.map((b) => Math.max(1, b.w * b.h));
+
+    // Maiores primeiro → resultado mais equilibrado.
+    const indices = visiveis
+      .map((_, i) => i)
+      .sort((a, b) => pesos[b] - pesos[a]);
+
+    /** Tenta empacotar numa grade 12×H. Devolve null se algo ficar fino demais. */
+    const tentar = (H: number): Bloco[] | null => {
+      const res = new Map<TipoBloco, Bloco>();
+      let falhou = false;
+
+      const distribuir = (
+        ids: number[],
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+      ) => {
+        if (falhou || ids.length === 0) return;
+        if (ids.length === 1) {
+          const b = visiveis[ids[0]];
+          res.set(b.id, { ...b, x, y, w, h, oculto: false });
+          return;
         }
+        if (w < 2 && h < 2) {
+          falhou = true;
+          return;
+        }
+
+        const total = ids.reduce((a, i) => a + pesos[i], 0);
+        let acc = 0;
+        let melhorDif = Infinity;
+        let corte = 1;
+        for (let k = 0; k < ids.length - 1; k++) {
+          acc += pesos[ids[k]];
+          const dif = Math.abs(acc - total / 2);
+          if (dif < melhorDif) {
+            melhorDif = dif;
+            corte = k + 1;
+          }
+        }
+        const grupoA = ids.slice(0, corte);
+        const grupoB = ids.slice(corte);
+        const pesoA = grupoA.reduce((a, i) => a + pesos[i], 0);
+        const fracao = pesoA / total;
+
+        // Divide ao longo do lado maior (mantém os blocos mais quadrados).
+        const horizontal = w < 2 ? false : h < 2 ? true : w >= h;
+        if (horizontal) {
+          const wA = clamp(Math.round(w * fracao), 1, w - 1);
+          distribuir(grupoA, x, y, wA, h);
+          distribuir(grupoB, x + wA, y, w - wA, h);
+        } else {
+          const hA = clamp(Math.round(h * fracao), 1, h - 1);
+          distribuir(grupoA, x, y, w, hA);
+          distribuir(grupoB, x, y + hA, w, h - hA);
+        }
+      };
+
+      if (indices.length === 1) {
+        const b = visiveis[indices[0]];
+        res.set(b.id, { ...b, x: 0, y: 0, w: COLUNAS, h: H, oculto: false });
+      } else {
+        distribuir(indices, 0, 0, COLUNAS, H);
       }
-      for (let c = melhorX; c < melhorX + w; c++) alturas[c] = melhorY + b.h;
-      novos.push({ ...b, x: melhorX, y: melhorY, w });
+
+      if (falhou) return null;
+      const lista = visiveis
+        .map((b) => res.get(b.id))
+        .filter(Boolean) as Bloco[];
+      if (lista.length !== visiveis.length) return null;
+      if (lista.some((b) => b.h < 2 || b.w < 1)) return null;
+      return lista;
+    };
+
+    let novosVisiveis: Bloco[] | null = null;
+    const baseH = Math.max(
+      2 * visiveis.length,
+      Math.round(areaTotal / COLUNAS),
+    );
+    for (let H = baseH; H <= baseH + 12 && !novosVisiveis; H++) {
+      novosVisiveis = tentar(H);
+    }
+
+    // Último recurso: só reposiciona (skyline), sem redimensionar.
+    if (!novosVisiveis) {
+      const colunas = new Array(COLUNAS).fill(0);
+      novosVisiveis = [];
+      for (const b of [...visiveis].sort((a, b) => a.y - b.y || a.x - b.x)) {
+        const w = clamp(b.w, 1, COLUNAS);
+        let melhorX = 0;
+        let melhorY = Infinity;
+        for (let x = 0; x + w <= COLUNAS; x++) {
+          let y = 0;
+          for (let c = x; c < x + w; c++) y = Math.max(y, colunas[c]);
+          if (y < melhorY) {
+            melhorY = y;
+            melhorX = x;
+          }
+        }
+        for (let c = melhorX; c < melhorX + w; c++) colunas[c] = melhorY + b.h;
+        novosVisiveis.push({ ...b, x: melhorX, y: melhorY, w });
+      }
+    }
+
+    // Blocos ocultos: empilhados abaixo, em largura total, sem sobrepor.
+    let y = novosVisiveis.reduce((a, b) => Math.max(a, b.y + b.h), 0);
+    const novos: Bloco[] = [...novosVisiveis];
+    for (const b of ocultos) {
+      novos.push({ ...b, x: 0, y, w: COLUNAS });
+      y += b.h;
     }
 
     definirLayout(novos);
@@ -575,7 +681,7 @@ export default function WorkspaceBlocos({
           {!ehMobile && (
             <button
               onClick={encaixarTodos}
-              title="Compactar os blocos: reposiciona tudo sem buracos"
+              title="Preencher a grade sem lacunas: ajusta altura/largura dos blocos para encaixarem"
               className="rounded-lg border border-slate-300 px-2 py-1 font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
             >
               🧲 Encaixar todos
