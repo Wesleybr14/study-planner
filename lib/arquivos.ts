@@ -190,6 +190,24 @@ export async function removerLocal(id: string): Promise<void> {
   }
 }
 
+export async function renomearLocal(id: string, nome: string): Promise<void> {
+  const db = await abrirBanco();
+  // Duas transações de propósito: `await` entre requisições desativa a
+  // transação do IndexedDB, então lemos e gravamos separadamente.
+  const registro = await promessa(
+    db.transaction(LOJA, "readonly").objectStore(LOJA).get(id) as IDBRequest<
+      RegistroLocal | undefined
+    >,
+  );
+  if (registro) {
+    registro.nome = nome;
+    await promessa(
+      db.transaction(LOJA, "readwrite").objectStore(LOJA).put(registro),
+    );
+  }
+  db.close();
+}
+
 // ---------------------------------------------------------------- nuvem
 
 export async function listarNuvem(
@@ -235,12 +253,10 @@ export async function enviarParaNuvem(
   const seguro = nome.replace(/[^\w.\-]+/g, "_").slice(-80) || "arquivo";
   const storagePath = `${uid}/${roteiroId}/${id}-${seguro}`;
 
-  const up = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, blob, {
-      contentType: mime || undefined,
-      upsert: false,
-    });
+  const up = await supabase.storage.from(BUCKET).upload(storagePath, blob, {
+    contentType: mime || undefined,
+    upsert: false,
+  });
   if (up.error) throw new Error(up.error.message);
 
   const ins = await supabase
@@ -293,4 +309,32 @@ export async function removerNuvem(arquivo: Arquivo): Promise<void> {
   if (arquivo.storagePath)
     await supabase.storage.from(BUCKET).remove([arquivo.storagePath]);
   await supabase.from("arquivos").delete().eq("id", arquivo.id);
+}
+
+/**
+ * Renomeia um arquivo na nuvem. Só o metadado muda — o caminho no bucket
+ * (`storage_path`) continua o mesmo, então o arquivo não precisa ser reenviado.
+ */
+export async function renomearNuvem(
+  arquivo: Arquivo,
+  nome: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("arquivos")
+    .update({ nome })
+    .eq("id", arquivo.id);
+  if (error) throw new Error(error.message);
+}
+
+/** Dispara o download do arquivo (Blob) para o computador. */
+export function salvarNoComputador(blob: Blob, nome: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome || "arquivo";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // dá tempo do navegador iniciar o download antes de liberar a URL
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

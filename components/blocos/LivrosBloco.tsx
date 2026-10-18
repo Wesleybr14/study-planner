@@ -225,6 +225,21 @@ export default function LivrosBloco({
             )}
             <button
               type="button"
+              onClick={() => {
+                setAviso("");
+                arq
+                  .baixar(a)
+                  .catch((e: any) =>
+                    setAviso(e?.message ?? "Não foi possível baixar."),
+                  );
+              }}
+              title="Salvar uma cópia no computador"
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              ⬇️ Baixar
+            </button>
+            <button
+              type="button"
               onClick={() => void arq.remover(a)}
               className="text-red-600 hover:underline dark:text-red-400"
             >

@@ -9,7 +9,10 @@ import {
   listarNuvem,
   removerLocal,
   removerNuvem,
+  renomearLocal,
+  renomearNuvem,
   salvarLocal,
+  salvarNoComputador,
   tamanhoLegivel,
   type Arquivo,
   type TipoArquivo,
@@ -66,14 +69,45 @@ export function useArquivos(
     [roteiroId, indice, tipo, recarregar],
   );
 
-  const remover = useCallback(
-    async (arquivo: Arquivo) => {
-      if (arquivo.origem === "local") await removerLocal(arquivo.id);
-      else await removerNuvem(arquivo).catch(() => {});
+  /** Remove vários arquivos de uma vez (evita recarregar a lista a cada um). */
+  const removerVarios = useCallback(
+    async (arquivos: Arquivo[]) => {
+      for (const a of arquivos) {
+        if (a.origem === "local") await removerLocal(a.id);
+        else await removerNuvem(a).catch(() => {});
+      }
       await recarregar();
     },
     [recarregar],
   );
+
+  const remover = useCallback(
+    async (arquivo: Arquivo) => {
+      await removerVarios([arquivo]);
+    },
+    [removerVarios],
+  );
+
+  /** Renomeia um arquivo (local ou na nuvem). */
+  const renomear = useCallback(
+    async (arquivo: Arquivo, nome: string) => {
+      const limpo = nome.trim();
+      if (!limpo || limpo === arquivo.nome) return;
+      if (arquivo.origem === "local") await renomearLocal(arquivo.id, limpo);
+      else await renomearNuvem(arquivo, limpo);
+      await recarregar();
+    },
+    [recarregar],
+  );
+
+  /** Baixa o arquivo para o computador. */
+  const baixar = useCallback(async (arquivo: Arquivo) => {
+    const blob =
+      arquivo.blob ??
+      (arquivo.storagePath ? await baixarNuvem(arquivo.storagePath) : null);
+    if (!blob) throw new Error("Arquivo indisponível.");
+    salvarNoComputador(blob, arquivo.nome);
+  }, []);
 
   /** Envia um arquivo local para a nuvem e remove a cópia local. */
   const subir = useCallback(
@@ -108,6 +142,9 @@ export function useArquivos(
     carregando,
     adicionar,
     remover,
+    removerVarios,
+    renomear,
+    baixar,
     subir,
     obterBlob,
     recarregar,
