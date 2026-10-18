@@ -140,6 +140,11 @@ export default function WorkspaceBlocos({
   const previewRef = useRef<Bloco | null>(null);
   const layoutRef = useRef<Bloco[] | null>(null);
   const primeiraCarga = useRef(true);
+  // Guarda o último toque no cabeçalho, para detectar duplo-clique.
+  const ultimoToque = useRef<{ id: TipoBloco | null; t: number }>({
+    id: null,
+    t: 0,
+  });
 
   // Carrega os arranjos salvos (ou usa o padrão).
   useEffect(() => {
@@ -296,6 +301,23 @@ export default function WorkspaceBlocos({
     dir?: Direcao,
   ) {
     if (ehMobile) return;
+
+    // Duplo-clique/toque no cabeçalho alterna a tela cheia.
+    if (modo === "mover") {
+      const agora = Date.now();
+      if (
+        ultimoToque.current.id === bloco.id &&
+        agora - ultimoToque.current.t < 350
+      ) {
+        ultimoToque.current = { id: null, t: 0 };
+        e.preventDefault();
+        e.stopPropagation();
+        setTelaCheia((t) => (t === bloco.id ? null : bloco.id));
+        return;
+      }
+      ultimoToque.current = { id: bloco.id, t: agora };
+    }
+
     e.preventDefault();
     e.stopPropagation();
     arrasto.current = {
@@ -422,6 +444,37 @@ export default function WorkspaceBlocos({
     );
   }
 
+  /**
+   * Reorganiza todos os blocos numa grade compacta, sem sobreposições nem
+   * buracos verticais: para cada bloco (na ordem atual de cima para baixo),
+   * procura a posição mais acima possível, usando a "altura" já ocupada por
+   * cada coluna (empacotamento tipo skyline).
+   */
+  function encaixarTodos() {
+    if (!layout) return;
+    const ordem = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
+    const alturas = new Array(COLUNAS).fill(0);
+    const novos: Bloco[] = [];
+
+    for (const b of ordem) {
+      const w = clamp(b.w, 1, COLUNAS);
+      let melhorX = 0;
+      let melhorY = Infinity;
+      for (let x = 0; x + w <= COLUNAS; x++) {
+        let y = 0;
+        for (let c = x; c < x + w; c++) y = Math.max(y, alturas[c]);
+        if (y < melhorY) {
+          melhorY = y;
+          melhorX = x;
+        }
+      }
+      for (let c = melhorX; c < melhorX + w; c++) alturas[c] = melhorY + b.h;
+      novos.push({ ...b, x: melhorX, y: melhorY, w });
+    }
+
+    definirLayout(novos);
+  }
+
   function conteudo(id: TipoBloco) {
     switch (id) {
       case "video":
@@ -519,6 +572,15 @@ export default function WorkspaceBlocos({
           >
             📌 Aplicar a todos
           </button>
+          {!ehMobile && (
+            <button
+              onClick={encaixarTodos}
+              title="Compactar os blocos: reposiciona tudo sem buracos"
+              className="rounded-lg border border-slate-300 px-2 py-1 font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              🧲 Encaixar todos
+            </button>
+          )}
         </div>
 
         {ocultos.length > 0 && (
@@ -586,7 +648,13 @@ export default function WorkspaceBlocos({
                   key={id}
                   className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
-                  <div className="mb-2 flex items-center justify-between">
+                  <div
+                    className="mb-2 flex items-center justify-between"
+                    onDoubleClick={() =>
+                      setTelaCheia((t) => (t === id ? null : id))
+                    }
+                    title="Duplo-toque para tela cheia"
+                  >
                     <h3 className="text-sm font-semibold">
                       {TIPOS[id].icone} {TIPOS[id].rotulo}
                     </h3>
@@ -645,6 +713,7 @@ export default function WorkspaceBlocos({
                     <header
                       onPointerDown={(e) => iniciar(e, b, "mover")}
                       style={{ touchAction: "none" }}
+                      title="Arraste para mover · duplo-clique para tela cheia"
                       className="flex cursor-grab items-center gap-2 border-b border-slate-200 bg-slate-50 px-2.5 py-1.5 select-none active:cursor-grabbing dark:border-slate-800 dark:bg-slate-800/60"
                     >
                       <span className="text-sm font-semibold">
