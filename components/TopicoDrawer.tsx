@@ -164,8 +164,22 @@ export default function TopicoDrawer({
             key={`${indice}-${recarregar}`}
           >
             {painel("videos", <VideosBloco topico={topico} />)}
-            {painel("livros", <LivrosBloco topico={topico} />)}
-            {painel("artigos", <ArtigosBloco topico={topico} />)}
+            {painel(
+              "livros",
+              <LivrosBloco
+                topico={topico}
+                roteiroId={roteiroId}
+                indice={indice}
+              />,
+            )}
+            {painel(
+              "artigos",
+              <ArtigosBloco
+                topico={topico}
+                roteiroId={roteiroId}
+                indice={indice}
+              />,
+            )}
             {painel(
               "notas",
               <NotasBloco

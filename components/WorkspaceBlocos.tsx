@@ -586,9 +586,23 @@ export default function WorkspaceBlocos({
       case "video":
         return <VideosBloco topico={topico} compacto />;
       case "livro":
-        return <LivrosBloco topico={topico} compacto />;
+        return (
+          <LivrosBloco
+            topico={topico}
+            roteiroId={roteiroId}
+            indice={indice}
+            compacto
+          />
+        );
       case "artigos":
-        return <ArtigosBloco topico={topico} compacto />;
+        return (
+          <ArtigosBloco
+            topico={topico}
+            roteiroId={roteiroId}
+            indice={indice}
+            compacto
+          />
+        );
       case "notas":
         return (
           <NotasBloco
