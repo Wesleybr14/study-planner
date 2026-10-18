@@ -26,17 +26,75 @@ import ArtigosBloco from "@/components/blocos/ArtigosBloco";
 import NotasBloco from "@/components/blocos/NotasBloco";
 import FlashcardsBloco from "@/components/blocos/FlashcardsBloco";
 import QuizBloco from "@/components/blocos/QuizBloco";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 
+/** Direção da alça de redimensionamento. */
+type Direcao = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
 type Arrasto = {
   id: TipoBloco;
   modo: "mover" | "redimensionar";
+  dir?: Direcao;
   inicioX: number;
   inicioY: number;
   base: Bloco;
 };
+
+/** Alças de redimensionamento: 4 cantos + 4 laterais. */
+const ALCAS: {
+  dir: Direcao;
+  pos: string;
+  cursor: string;
+  canto?: string;
+}[] = [
+  {
+    dir: "nw",
+    pos: "left-0 top-0",
+    cursor: "cursor-nwse-resize",
+    canto: "border-l-2 border-t-2",
+  },
+  {
+    dir: "ne",
+    pos: "right-0 top-0",
+    cursor: "cursor-nesw-resize",
+    canto: "border-r-2 border-t-2",
+  },
+  {
+    dir: "sw",
+    pos: "left-0 bottom-0",
+    cursor: "cursor-nesw-resize",
+    canto: "border-l-2 border-b-2",
+  },
+  {
+    dir: "se",
+    pos: "right-0 bottom-0",
+    cursor: "cursor-nwse-resize",
+    canto: "border-r-2 border-b-2",
+  },
+  {
+    dir: "n",
+    pos: "left-1/2 top-0 -translate-x-1/2",
+    cursor: "cursor-ns-resize",
+  },
+  {
+    dir: "s",
+    pos: "left-1/2 bottom-0 -translate-x-1/2",
+    cursor: "cursor-ns-resize",
+  },
+  {
+    dir: "e",
+    pos: "right-0 top-1/2 -translate-y-1/2",
+    cursor: "cursor-ew-resize",
+  },
+  {
+    dir: "w",
+    pos: "left-0 top-1/2 -translate-y-1/2",
+    cursor: "cursor-ew-resize",
+  },
+];
 
 /**
  * Workspace em blocos (estilo "snap"): os recursos do tópico ficam em blocos
@@ -153,18 +211,42 @@ export default function WorkspaceBlocos({
       const dy = Math.round((e.clientY - d.inicioY) / passoY);
       const alvo = atual.find((b) => b.id === d.id);
       if (!alvo) return;
-      const novo: Bloco =
-        d.modo === "mover"
-          ? {
-              ...alvo,
-              x: clamp(d.base.x + dx, 0, COLUNAS - alvo.w),
-              y: Math.max(0, d.base.y + dy),
-            }
-          : {
-              ...alvo,
-              w: clamp(d.base.w + dx, 1, COLUNAS - alvo.x),
-              h: Math.max(2, d.base.h + dy),
-            };
+
+      let novo: Bloco;
+      if (d.modo === "mover") {
+        novo = {
+          ...alvo,
+          x: clamp(d.base.x + dx, 0, COLUNAS - alvo.w),
+          y: Math.max(0, d.base.y + dy),
+        };
+      } else {
+        const dir = d.dir ?? "se";
+        const bordaDireita = d.base.x + d.base.w; // borda direita fixa
+        const bordaBaixo = d.base.y + d.base.h; // borda inferior fixa
+        let x = d.base.x;
+        let y = d.base.y;
+        let w = d.base.w;
+        let h = d.base.h;
+
+        if (dir.includes("e")) {
+          w = clamp(d.base.w + dx, 1, COLUNAS - d.base.x);
+        }
+        if (dir.includes("w")) {
+          const nx = clamp(d.base.x + dx, 0, bordaDireita - 1);
+          x = nx;
+          w = bordaDireita - nx;
+        }
+        if (dir.includes("s")) {
+          h = Math.max(2, d.base.h + dy);
+        }
+        if (dir.includes("n")) {
+          const ny = clamp(d.base.y + dy, 0, bordaBaixo - 2);
+          y = ny;
+          h = bordaBaixo - ny;
+        }
+        novo = { ...alvo, x, y, w, h };
+      }
+
       previewRef.current = novo;
       setPreview(novo);
     },
@@ -199,6 +281,7 @@ export default function WorkspaceBlocos({
     e: React.PointerEvent,
     bloco: Bloco,
     modo: "mover" | "redimensionar",
+    dir?: Direcao,
   ) {
     if (ehMobile) return;
     e.preventDefault();
@@ -206,6 +289,7 @@ export default function WorkspaceBlocos({
     arrasto.current = {
       id: bloco.id,
       modo,
+      dir,
       inicioX: e.clientX,
       inicioY: e.clientY,
       base: { ...bloco },
@@ -441,12 +525,15 @@ export default function WorkspaceBlocos({
           </div>
         )}
 
-        <button
-          onClick={onFechar}
-          className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          ← Voltar ao painel
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={onFechar}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            ← Voltar ao painel
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-auto p-2">
@@ -535,14 +622,27 @@ export default function WorkspaceBlocos({
                       {conteudo(b.id)}
                     </div>
 
-                    <div
-                      onPointerDown={(e) => iniciar(e, b, "redimensionar")}
-                      style={{ touchAction: "none" }}
-                      title="Redimensionar"
-                      className="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
-                    >
-                      <span className="absolute right-1 bottom-1 h-2 w-2 border-r-2 border-b-2 border-slate-400 dark:border-slate-500" />
-                    </div>
+                    {ALCAS.map((a) => {
+                      const tam = a.canto
+                        ? "h-2.5 w-2.5"
+                        : a.dir === "n" || a.dir === "s"
+                          ? "h-2 w-12"
+                          : "h-12 w-2";
+                      const visual = a.canto
+                        ? `border-slate-400 dark:border-slate-500 ${a.canto}`
+                        : "rounded-full hover:bg-slate-400/50 dark:hover:bg-slate-500/50";
+                      return (
+                        <div
+                          key={a.dir}
+                          onPointerDown={(e) =>
+                            iniciar(e, b, "redimensionar", a.dir)
+                          }
+                          style={{ touchAction: "none" }}
+                          title="Redimensionar"
+                          className={`absolute z-20 ${tam} ${a.pos} ${a.cursor} ${visual}`}
+                        />
+                      );
+                    })}
                   </div>
                 );
               })}
