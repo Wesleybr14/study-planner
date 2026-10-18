@@ -47,10 +47,16 @@ export function BotaoAdicionar({
   );
 }
 
+/** Mensagem de aviso/erro dos arquivos (renderizada pelo componente pai). */
+export function Aviso({ texto }: { texto: string }) {
+  if (!texto) return null;
+  return <p className="text-xs text-amber-600 dark:text-amber-400">{texto}</p>;
+}
+
 /**
- * Seção "No seu computador": lista os arquivos (locais e na nuvem) de um tópico,
- * permite adicionar/abrir/remover e enviar para a nuvem. Apresentacional — os
- * dados vêm de `useArquivos` (chamado pelo componente pai).
+ * Seção de arquivos de um tópico: lista os locais e os da nuvem, permite
+ * abrir/remover e enviar para a nuvem. Apresentacional — os dados vêm de
+ * `useArquivos` (chamado pelo componente pai).
  */
 export default function SeletorArquivos({
   locais,
@@ -58,30 +64,33 @@ export default function SeletorArquivos({
   carregando,
   acoes,
   alturaLeitor = "26rem",
+  titulo = "📁 No seu computador",
+  onAviso,
 }: {
   locais: Arquivo[];
   nuvem: Arquivo[];
   carregando: boolean;
   acoes: AcoesArquivos;
   alturaLeitor?: string;
+  titulo?: string;
+  onAviso: (mensagem: string) => void;
 }) {
-  const [aviso, setAviso] = useState("");
   const [aberto, setAberto] = useState<Arquivo | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
 
   async function aoAdicionar(files: File[]) {
-    setAviso("");
+    onAviso("");
     const erros = await acoes.adicionar(files);
-    if (erros.length) setAviso(erros.join(" "));
+    if (erros.length) onAviso(erros.join(" "));
   }
 
   async function aoSubir(a: Arquivo) {
-    setAviso("");
+    onAviso("");
     setOcupado(a.id);
     try {
       await acoes.subir(a);
     } catch (e: any) {
-      setAviso(
+      onAviso(
         e?.message ??
           "Falha ao salvar na nuvem. Você rodou a supabase-migration-6.sql?",
       );
@@ -148,7 +157,7 @@ export default function SeletorArquivos({
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-slate-300 p-3 dark:border-slate-700">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">📁 No seu computador</p>
+        <p className="text-sm font-semibold">{titulo}</p>
         <BotaoAdicionar onArquivos={aoAdicionar} />
       </div>
 
@@ -170,8 +179,9 @@ export default function SeletorArquivos({
 
       {vazio && (
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          Adicione um PDF ou EPUB que já esteja no seu PC. Ele fica salvo neste
-          navegador; use ☁️ para ter em todos os aparelhos.
+          Adicione um PDF ou EPUB que já esteja no seu PC (ou arraste e solte
+          aqui). Fica salvo neste navegador; use ☁️ para ter em todos os
+          aparelhos.
         </p>
       )}
 
@@ -193,10 +203,6 @@ export default function SeletorArquivos({
           </p>
           <ul className="space-y-1">{lista(nuvem, "nuvem")}</ul>
         </div>
-      )}
-
-      {aviso && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">{aviso}</p>
       )}
     </div>
   );

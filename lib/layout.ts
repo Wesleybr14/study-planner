@@ -9,7 +9,7 @@
 import { supabase } from "@/lib/supabase";
 
 export type TipoBloco =
-  "video" | "livro" | "artigos" | "notas" | "flashcards" | "quiz";
+  "video" | "livro" | "artigos" | "arquivos" | "notas" | "flashcards" | "quiz";
 
 export type Bloco = {
   id: TipoBloco;
@@ -40,6 +40,7 @@ export const TIPOS: Record<TipoBloco, { rotulo: string; icone: string }> = {
   video: { rotulo: "Vídeo", icone: "🎬" },
   livro: { rotulo: "Livro", icone: "📖" },
   artigos: { rotulo: "Artigos", icone: "🔬" },
+  arquivos: { rotulo: "Meus arquivos", icone: "📁" },
   notas: { rotulo: "Notas", icone: "📝" },
   flashcards: { rotulo: "Flashcards", icone: "🃏" },
   quiz: { rotulo: "Quiz", icone: "❓" },
@@ -49,6 +50,7 @@ export const TIPOS_ORDEM: TipoBloco[] = [
   "video",
   "livro",
   "artigos",
+  "arquivos",
   "notas",
   "flashcards",
   "quiz",
@@ -60,15 +62,16 @@ const clamp = (v: number, min: number, max: number) =>
 const num = (v: unknown, def: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.round(v) : def;
 
-// Layout inicial: vídeo grande em cima à esquerda, livro em modo retrato à
-// direita, quiz e notas logo abaixo — aproveitando a largura da tela.
+// Layout inicial: vídeo com livro na primeira faixa, quiz/notas/artigos na
+// segunda e flashcards/meus arquivos na última — uma grade cheia, sem buracos.
 export const LAYOUT_PADRAO: Layout = [
   { id: "video", x: 0, y: 0, w: 8, h: 9 },
-  { id: "livro", x: 8, y: 0, w: 4, h: 11 },
+  { id: "livro", x: 8, y: 0, w: 4, h: 9 },
   { id: "quiz", x: 0, y: 9, w: 4, h: 5 },
   { id: "notas", x: 4, y: 9, w: 4, h: 5 },
-  { id: "artigos", x: 8, y: 11, w: 4, h: 5 },
-  { id: "flashcards", x: 0, y: 14, w: 8, h: 4 },
+  { id: "artigos", x: 8, y: 9, w: 4, h: 5 },
+  { id: "flashcards", x: 0, y: 14, w: 6, h: 4 },
+  { id: "arquivos", x: 6, y: 14, w: 6, h: 4 },
 ];
 
 // Arranjos prontos (não entram na biblioteca do usuário).
@@ -86,6 +89,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "notas", x: 6, y: 6, w: 6, h: 6 },
       { id: "flashcards", x: 0, y: 12, w: 6, h: 5 },
       { id: "quiz", x: 6, y: 12, w: 6, h: 5 },
+      { id: "arquivos", x: 0, y: 17, w: 12, h: 4 },
     ],
   },
   {
@@ -97,6 +101,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "artigos", x: 0, y: 15, w: 6, h: 6 },
       { id: "quiz", x: 6, y: 15, w: 6, h: 6 },
       { id: "flashcards", x: 0, y: 21, w: 12, h: 4 },
+      { id: "arquivos", x: 0, y: 25, w: 12, h: 4 },
     ],
   },
   {
@@ -108,6 +113,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "notas", x: 0, y: 14, w: 7, h: 6 },
       { id: "quiz", x: 7, y: 14, w: 5, h: 6 },
       { id: "flashcards", x: 0, y: 20, w: 12, h: 4 },
+      { id: "arquivos", x: 0, y: 24, w: 12, h: 4 },
     ],
   },
   {
@@ -119,6 +125,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "notas", x: 0, y: 18, w: 12, h: 6 },
       { id: "flashcards", x: 0, y: 24, w: 12, h: 4 },
       { id: "quiz", x: 0, y: 28, w: 12, h: 5 },
+      { id: "arquivos", x: 0, y: 33, w: 12, h: 4 },
     ],
   },
 ];
@@ -154,12 +161,21 @@ export function normalizarLayout(entrada: unknown): Layout {
     });
   }
 
-  // Completa com o padrão o que estiver faltando.
+  const lista = [...porId.values()];
+
+  // Completa com o padrão o que estiver faltando (ex.: um tipo de bloco novo).
+  // Entra empilhado no fim, em largura total, para NÃO colidir nem resetar o
+  // arranjo que o usuário já tinha salvo.
+  let fim = lista.reduce((a, b) => Math.max(a, b.y + b.h), 0);
   for (const def of LAYOUT_PADRAO)
-    if (!porId.has(def.id)) porId.set(def.id, { ...def });
+    if (!porId.has(def.id)) {
+      const novo = { ...def, x: 0, y: fim, w: COLUNAS };
+      porId.set(def.id, novo);
+      lista.push(novo);
+      fim += def.h;
+    }
 
   // Valida colisões apenas entre os blocos visíveis.
-  const lista = [...porId.values()];
   const visiveis = lista.filter((b) => !b.oculto);
   for (let i = 0; i < visiveis.length; i++)
     for (let j = i + 1; j < visiveis.length; j++)

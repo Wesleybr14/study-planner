@@ -4,16 +4,25 @@ import { useEffect, useState } from "react";
 import VideosBloco from "@/components/blocos/VideosBloco";
 import LivrosBloco from "@/components/blocos/LivrosBloco";
 import ArtigosBloco from "@/components/blocos/ArtigosBloco";
+import ArquivosBloco from "@/components/blocos/ArquivosBloco";
 import NotasBloco from "@/components/blocos/NotasBloco";
 import FlashcardsBloco from "@/components/blocos/FlashcardsBloco";
 import QuizBloco from "@/components/blocos/QuizBloco";
 
-type Aba = "videos" | "livros" | "artigos" | "notas" | "flashcards" | "quiz";
+type Aba =
+  | "videos"
+  | "livros"
+  | "artigos"
+  | "arquivos"
+  | "notas"
+  | "flashcards"
+  | "quiz";
 
 const ABAS: { id: Aba; rotulo: string; icone: string }[] = [
   { id: "videos", rotulo: "Vídeos", icone: "🎬" },
   { id: "livros", rotulo: "Livros", icone: "📖" },
   { id: "artigos", rotulo: "Artigos", icone: "🔬" },
+  { id: "arquivos", rotulo: "Arquivos", icone: "📁" },
   { id: "notas", rotulo: "Notas", icone: "📝" },
   { id: "flashcards", rotulo: "Flashcards", icone: "🃏" },
   { id: "quiz", rotulo: "Quiz", icone: "❓" },
@@ -179,6 +188,10 @@ export default function TopicoDrawer({
                 roteiroId={roteiroId}
                 indice={indice}
               />,
+            )}
+            {painel(
+              "arquivos",
+              <ArquivosBloco roteiroId={roteiroId} indice={indice} />,
             )}
             {painel(
               "notas",

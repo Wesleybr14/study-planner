@@ -11,9 +11,10 @@ vídeos e livros sobre o tema — com metas, anotações e flashcards de revisã
 - 📖 Livros automáticos via Open Library (confiável, sem chave) + Google Books, com **leitor embutido**
 - 📥 Recomendação prioriza livros **gratuitos** — com PDF baixável, leitura online ou empréstimo grátis
 - 🔬 Artigos científicos gratuitos (arXiv, Europe PMC, DOAJ) com resumo e PDF
-- 📁 **Abra um livro/artigo que já está no seu computador**: nos blocos de **Livros** e **Artigos** dá para adicionar **PDF ou EPUB** do seu PC (fica salvo no navegador, via IndexedDB) e ler embutido — PDF no visualizador nativo, **EPUB** com índice/próxima-anterior/ajuste de letra. O botão **☁️ Salvar na nuvem** envia o arquivo para o Supabase Storage, deixando-o disponível em **qualquer aparelho** onde você fizer login.
+- 📁 **Abra um livro/artigo que já está no seu computador**: nos blocos de **Livros** e **Artigos** dá para adicionar **PDF ou EPUB** do seu PC (fica salvo no navegador, via IndexedDB) e ler embutido — PDF no visualizador nativo, **EPUB** com índice/próxima-anterior/ajuste de letra. Você pode **arrastar e soltar** o arquivo direto sobre o bloco. O botão **☁️ Salvar na nuvem** envia o arquivo para o Supabase Storage, deixando-o disponível em **qualquer aparelho** onde você fizer login.
+- 📂 **Bloco "📁 Meus arquivos"**: reúne num só lugar todos os PDFs/EPUBs que você adicionou ao tópico (livros **e** artigos), com abrir, remover, enviar para a nuvem e **arrastar-e-soltar**. Também aparece como aba **📁 Arquivos** no painel lateral.
 - 🗂️ **Painel lateral por tópico**: reúne vídeos, livros, artigos, anotações, flashcards e quiz sem sair da página
-- 🧩 **Workspace em blocos** (estilo _snap_): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, notas, flashcards e quiz **arrastando e redimensionando** livremente (alças nos **4 cantos e 4 laterais**), ou escolhendo um **layout pronto**. Dentro de cada bloco dá para **trocar qual vídeo/livro/artigo aparece**, **ocultar** blocos que você não quer ver (e mostrá-los de novo depois) e usar **⛶ (ou duplo-clique no cabeçalho) para encaixar o bloco na grade em tela cheia** — volta com **Esc**. O botão **🧲 Encaixar todos** reorganiza e **redimensiona** os blocos para preencherem a grade **sem lacunas** (ajusta altura/largura de cada um). O tema (claro/escuro/sistema) também fica disponível no cabeçalho do workspace.
+- 🧩 **Workspace em blocos** (estilo _snap_): abra com o botão **⛶ Expandir** e organize os blocos de vídeo, livro, artigos, **meus arquivos**, notas, flashcards e quiz **arrastando e redimensionando** livremente (alças nos **4 cantos e 4 laterais**), ou escolhendo um **layout pronto**. Dentro de cada bloco dá para **trocar qual vídeo/livro/artigo aparece**, **ocultar** blocos que você não quer ver (e mostrá-los de novo depois) e usar **⛶ (ou duplo-clique no cabeçalho) para encaixar o bloco na grade em tela cheia** — volta com **Esc**. O botão **🧲 Encaixar todos** reorganiza e **redimensiona** os blocos para preencherem a grade **sem lacunas** (ajusta altura/largura de cada um). O tema (claro/escuro/sistema) também fica disponível no cabeçalho do workspace.
 - 💾 **Arranjos por tópico**: cada tópico guarda o seu próprio arranjo (edite à mão ou aplique um layout pronto). Você também pode **salvar arranjos com um nome** na sua biblioteca e escolher, no seletor _Arranjo_, qual usar em cada tópico ("situação"). O botão **📌 Aplicar a todos** replica o arranjo atual para **todos os tópicos** de uma vez. Os tópicos com arranjo próprio ganham um indicador **🧩** na lista. Tudo fica salvo **na nuvem** (coluna `preferencias.layout`)
 - 🔄 Botão para regenerar as buscas de vídeos/livros/artigos de um roteiro (útil para roteiros antigos)
 - 📊 Acompanhamento de progresso por tópico
@@ -108,8 +109,8 @@ git push -u origin main
 study-planner/
 ├── app/                    # páginas (login, dashboard, tema, cronometro, revisao, estatisticas, configuracoes)
 │   └── api/                # rotas: gemini, youtube, books, artigos, flashcards, quiz
-├── components/             # AppShell, TopicoDrawer, WorkspaceBlocos, BottomNav, ThemeToggle, Cronometro, LeitorArquivo, SeletorArquivos
-│   └── blocos/             # blocos reutilizáveis: vídeo, livro, artigos, notas, flashcards, quiz
+├── components/             # AppShell, TopicoDrawer, WorkspaceBlocos, BottomNav, ThemeToggle, Cronometro, LeitorArquivo, SeletorArquivos, SoltarArquivos
+│   └── blocos/             # blocos reutilizáveis: vídeo, livro, artigos, arquivos, notas, flashcards, quiz
 ├── lib/                    # supabase, gemini, youtube, books, artigos, arquivos, layout, prazo, cronograma, revisao
 ├── supabase-setup.sql      # criação das tabelas
 ├── supabase-migration-2.sql# migração (prazo)

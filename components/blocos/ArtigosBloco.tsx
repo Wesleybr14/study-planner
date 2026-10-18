@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SeletorArquivos, { BotaoAdicionar } from "@/components/SeletorArquivos";
+import SeletorArquivos, {
+  Aviso,
+  BotaoAdicionar,
+} from "@/components/SeletorArquivos";
+import { AreaSoltar } from "@/components/SoltarArquivos";
 import LeitorArquivo from "@/components/LeitorArquivo";
 import { useArquivos } from "@/components/useArquivos";
 import type { Arquivo } from "@/lib/arquivos";
@@ -32,9 +36,17 @@ export default function ArtigosBloco({
   const [carregando, setCarregando] = useState(true);
   const [aberto, setAberto] = useState<number | null>(null);
   const [sel, setSel] = useState("");
+  const [aviso, setAviso] = useState("");
 
   // Arquivos do usuário (locais + nuvem) para este tópico.
   const arq = useArquivos(roteiroId, indice, "artigo");
+
+  /** Adiciona arquivos (botão ou arrastar-e-soltar) e mostra possíveis erros. */
+  async function soltar(files: File[]) {
+    setAviso("");
+    const erros = await arq.adicionar(files);
+    if (erros.length) setAviso(erros.join(" "));
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -101,7 +113,10 @@ export default function ArtigosBloco({
     const f = atual?.tipo === "arquivo" ? atual.a : null;
 
     return (
-      <div className="flex h-full flex-col gap-2">
+      <AreaSoltar
+        onArquivos={(files) => void soltar(files)}
+        className="flex h-full flex-col gap-2"
+      >
         <div className="flex shrink-0 items-center gap-2">
           {opcoes.length > 1 ? (
             <select
@@ -140,11 +155,10 @@ export default function ArtigosBloco({
                     : "Nenhum artigo encontrado"}
             </span>
           )}
-          <BotaoAdicionar
-            compacto
-            onArquivos={(files) => void arq.adicionar(files)}
-          />
+          <BotaoAdicionar compacto onArquivos={(files) => void soltar(files)} />
         </div>
+
+        {aviso && <Aviso texto={aviso} />}
 
         {f && (
           <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs">
@@ -154,7 +168,14 @@ export default function ArtigosBloco({
             {f.origem === "local" && (
               <button
                 type="button"
-                onClick={() => void arq.subir(f).catch(() => {})}
+                onClick={async () => {
+                  setAviso("");
+                  try {
+                    await arq.subir(f);
+                  } catch (e: any) {
+                    setAviso(e?.message ?? "Falha ao salvar na nuvem.");
+                  }
+                }}
                 title="Salvar na nuvem"
                 className="text-blue-600 hover:underline dark:text-blue-400"
               >
@@ -193,18 +214,22 @@ export default function ArtigosBloco({
             {carregando ? "Buscando artigos..." : "Nenhum artigo encontrado."}
           </p>
         )}
-      </div>
+      </AreaSoltar>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <AreaSoltar
+      onArquivos={(files) => void soltar(files)}
+      className="space-y-3"
+    >
       <SeletorArquivos
         locais={arq.locais}
         nuvem={arq.nuvem}
         carregando={arq.carregando}
         acoes={arq}
         alturaLeitor="30rem"
+        onAviso={setAviso}
       />
 
       <div className="space-y-2">
@@ -251,6 +276,8 @@ export default function ArtigosBloco({
           </div>
         ))}
       </div>
-    </div>
+
+      <Aviso texto={aviso} />
+    </AreaSoltar>
   );
 }

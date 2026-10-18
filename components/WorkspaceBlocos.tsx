@@ -23,6 +23,7 @@ import {
 import VideosBloco from "@/components/blocos/VideosBloco";
 import LivrosBloco from "@/components/blocos/LivrosBloco";
 import ArtigosBloco from "@/components/blocos/ArtigosBloco";
+import ArquivosBloco from "@/components/blocos/ArquivosBloco";
 import NotasBloco from "@/components/blocos/NotasBloco";
 import FlashcardsBloco from "@/components/blocos/FlashcardsBloco";
 import QuizBloco from "@/components/blocos/QuizBloco";
@@ -603,6 +604,8 @@ export default function WorkspaceBlocos({
             compacto
           />
         );
+      case "arquivos":
+        return <ArquivosBloco roteiroId={roteiroId} indice={indice} />;
       case "notas":
         return (
           <NotasBloco
