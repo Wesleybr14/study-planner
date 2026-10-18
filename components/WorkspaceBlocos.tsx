@@ -122,6 +122,18 @@ export default function WorkspaceBlocos({
   const [preview, setPreview] = useState<Bloco | null>(null);
   const [largura, setLargura] = useState(0);
   const [ehMobile, setEhMobile] = useState(false);
+  // Bloco exibido em tela cheia (encaixado na grade ocupando toda a área).
+  const [telaCheia, setTelaCheia] = useState<TipoBloco | null>(null);
+
+  // Esc sai da tela cheia.
+  useEffect(() => {
+    if (!telaCheia) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTelaCheia(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [telaCheia]);
 
   const areaRef = useRef<HTMLDivElement>(null);
   const arrasto = useRef<Arrasto | null>(null);
@@ -536,11 +548,35 @@ export default function WorkspaceBlocos({
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-2">
+      <div
+        className={`flex-1 overflow-auto p-2 ${telaCheia ? "flex flex-col" : ""}`}
+      >
         {!layout ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Carregando arranjo...
           </p>
+        ) : telaCheia ? (
+          // Tela cheia: um bloco ocupa toda a área do workspace.
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow dark:border-slate-800 dark:bg-slate-900">
+            <header className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-2.5 py-1.5 dark:border-slate-800 dark:bg-slate-800/60">
+              <span className="text-sm font-semibold">
+                {TIPOS[telaCheia].icone} {TIPOS[telaCheia].rotulo}
+              </span>
+              <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
+                ocupando toda a grade
+              </span>
+              <button
+                onClick={() => setTelaCheia(null)}
+                title="Sair da tela cheia (Esc)"
+                className="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                ⤡ Restaurar
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-auto p-3">
+              {conteudo(telaCheia)}
+            </div>
+          </div>
         ) : ehMobile ? (
           // Celular: blocos empilhados (sem arrastar/redimensionar).
           <div className="space-y-4">
@@ -554,13 +590,22 @@ export default function WorkspaceBlocos({
                     <h3 className="text-sm font-semibold">
                       {TIPOS[id].icone} {TIPOS[id].rotulo}
                     </h3>
-                    <button
-                      onClick={() => ocultar(id)}
-                      title="Ocultar bloco"
-                      className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
-                    >
-                      👁
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setTelaCheia(id)}
+                        title="Encaixar na grade / tela cheia"
+                        className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                      >
+                        ⛶
+                      </button>
+                      <button
+                        onClick={() => ocultar(id)}
+                        title="Ocultar bloco"
+                        className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                      >
+                        👁
+                      </button>
+                    </div>
                   </div>
                   {conteudo(id)}
                 </section>
@@ -608,6 +653,14 @@ export default function WorkspaceBlocos({
                       <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                         ⠿
                       </span>
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => setTelaCheia(b.id)}
+                        title="Encaixar na grade / tela cheia"
+                        className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                      >
+                        ⛶
+                      </button>
                       <button
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => ocultar(b.id)}
