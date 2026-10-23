@@ -71,6 +71,7 @@ Se você já tinha criado a tabela antes, rode também `supabase-migration-2.sql
 `supabase-migration-6.sql` (bucket + tabela para **arquivos do usuário** — livros/artigos do PC).
 A migração 6 cria o bucket privado `arquivos` no Supabase Storage; sem ela, o botão
 **☁️ Salvar na nuvem** não funciona (mas os arquivos locais no navegador continuam funcionando).
+Depois, rode `supabase-migration-7.sql` e `supabase-migration-8.sql` (veja abaixo).
 
 ### 3. Instalar e rodar
 
@@ -118,6 +119,8 @@ study-planner/
 ├── supabase-migration-4.sql# migração (arranjo do workspace em blocos)
 ├── supabase-migration-5.sql# migração (tags nos roteiros)
 ├── supabase-migration-6.sql# migração (arquivos do usuário: bucket + metadados)
+├── supabase-migration-7.sql# migração (perfil, versão, cotas, restauração)
+├── supabase-migration-8.sql# migração (limites do bucket + cota de vídeos)
 ├── .env.example            # modelo das variáveis
 └── .env.local              # suas chaves (NÃO vai pro Git)
 ```
@@ -155,6 +158,19 @@ As APIs recusam chamadas quando a migração não está disponível. Os roteiros
 - Em Supabase > Authentication > URL Configuration, inclua a URL `/login` do seu
   domínio e do ambiente local nas URLs de redirecionamento. O fluxo “Esqueci minha
   senha” depende dessa configuração e do envio de e-mails do Supabase.
+
+### Migração 8: limites e cota de vídeos
+
+Execute `supabase-migration-8.sql` depois da 7. Ela limita o bucket `arquivos` a
+PDF/EPUB de até 50 MB e cria uma cota própria para buscas de vídeo (30 por hora
+por usuário): cada busca na YouTube Data API custa 100 das 10.000 unidades
+diárias do projeto. As buscas externas (vídeos, livros e artigos) ficam em cache
+por 1 dia e têm timeout de 8 s. A cota só é descontada depois que o pedido é
+validado. Apagar todos os roteiros ou restaurar um backup substituindo os dados
+também remove do Storage os arquivos que ficariam sem dono.
+
+A variável opcional `GEMINI_MODELS` (lista separada por vírgulas) troca os
+modelos do Gemini sem alterar o código.
 
 ### Verificações
 

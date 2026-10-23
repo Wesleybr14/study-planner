@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarRoteiro } from "@/lib/gemini";
-import { authorize, body, text, failure, ApiError } from "@/lib/api-server";
+import { authorize, consumirCota, body, text, failure, ApiError } from "@/lib/api-server";
 export async function POST(req: NextRequest) {
   try {
-    await authorize(req, true);
+    const db = await authorize(req);
     const d = await body(req);
     if (
       d.horasSemana !== undefined &&
@@ -27,13 +27,16 @@ export async function POST(req: NextRequest) {
         !Number.isFinite(Date.parse(d.prazo)))
     )
       throw new ApiError("Prazo inválido.");
-    const value = await gerarRoteiro(text(d.tema, "Tema"), {
+    const tema = text(d.tema, "Tema");
+    const perfil = {
       nivel: text(d.nivel, "Nível", 40, true),
       objetivo: text(d.objetivo, "Objetivo", 1000, true),
       idioma: text(d.idioma, "Idioma", 80, true),
       horasSemana: Number(d.horasSemana) || 7,
       prazo: text(d.prazo, "Prazo", 20, true),
-    });
+    };
+    await consumirCota(db, "ia");
+    const value = await gerarRoteiro(tema, perfil);
     return NextResponse.json(value);
   } catch (error) {
     return failure(error);

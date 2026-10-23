@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarFlashcards } from "@/lib/gemini";
-import { authorize, body, text, failure, ApiError } from "@/lib/api-server";
+import { authorize, consumirCota, body, text, failure } from "@/lib/api-server";
 export async function POST(req: NextRequest) {
   try {
-    await authorize(req, true);
+    const db = await authorize(req);
     const d = await body(req);
-    const value = await gerarFlashcards(
-      text(d.titulo, "Título"),
-      text(d.descricao, "Descrição", 4000, true),
-    );
+    const titulo = text(d.titulo, "Título");
+    const descricao = text(d.descricao, "Descrição", 4000, true);
+    await consumirCota(db, "ia");
+    const value = await gerarFlashcards(titulo, descricao);
     return NextResponse.json({ flashcards: value });
   } catch (error) {
     return failure(error);

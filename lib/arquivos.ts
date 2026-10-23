@@ -41,6 +41,17 @@ export function formatoDe(nome: string, mime = ""): FormatoArquivo {
   return "outro";
 }
 
+/**
+ * MIME para enviar ao bucket. O navegador às vezes informa "" para .epub
+ * (comum no Windows), e o bucket só aceita PDF/EPUB (migração 8).
+ */
+export function mimeDe(nome: string, mime = ""): string {
+  const formato = formatoDe(nome, mime);
+  if (formato === "pdf") return "application/pdf";
+  if (formato === "epub") return "application/epub+zip";
+  return mime;
+}
+
 /** Tamanho legível (ex.: "1,2 MB"). */
 export function tamanhoLegivel(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "";
@@ -254,7 +265,7 @@ export async function enviarParaNuvem(
   const storagePath = `${uid}/${roteiroId}/${id}-${seguro}`;
 
   const up = await supabase.storage.from(BUCKET).upload(storagePath, blob, {
-    contentType: mime || undefined,
+    contentType: mimeDe(nome, mime) || undefined,
     upsert: false,
   });
   if (up.error) throw new Error(up.error.message);
@@ -303,6 +314,29 @@ export async function baixarNuvem(storagePath: string): Promise<Blob> {
   const resp = await fetch(data.signedUrl);
   if (!resp.ok) throw new Error("Falha ao baixar o arquivo.");
   return await resp.blob();
+}
+
+/**
+ * Caminhos no bucket dos arquivos ligados a roteiros. Apagar um roteiro remove
+ * as linhas de `arquivos` em cascata, mas não os objetos do Storage — use isto
+ * antes de apagar e `removerDoBucket` depois, para não deixar órfãos.
+ */
+export async function caminhosDeRoteiros(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("arquivos")
+    .select("storage_path")
+    .not("roteiro_id", "is", null);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.storage_path as string).filter(Boolean);
+}
+
+/** Remove objetos do bucket em lotes (melhor esforço: falhas são ignoradas). */
+export async function removerDoBucket(caminhos: string[]): Promise<void> {
+  for (let i = 0; i < caminhos.length; i += 100)
+    await supabase.storage
+      .from(BUCKET)
+      .remove(caminhos.slice(i, i + 100))
+      .catch(() => undefined);
 }
 
 export async function removerNuvem(arquivo: Arquivo): Promise<void> {

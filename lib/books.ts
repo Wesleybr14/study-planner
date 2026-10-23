@@ -3,6 +3,8 @@
 //  - Google Books (complemento; instável e com cota, então é "best effort").
 // O resultado prioriza livros gratuitos (PDF ou leitura online).
 
+import { buscarExterno } from "./http";
+
 export type Acesso = "pdf" | "online" | "emprestimo" | "pago";
 
 export type Livro = {
@@ -42,7 +44,7 @@ async function resolverArquivoPublico(
 ): Promise<{ pdf: string | null; url: string; acesso: Acesso }> {
   const detalhes = `https://archive.org/details/${ia}`;
   try {
-    const res = await fetch(`https://archive.org/metadata/${ia}`);
+    const res = await buscarExterno(`https://archive.org/metadata/${ia}`);
     if (!res.ok) return { pdf: null, url: detalhes, acesso: "online" };
 
     const m = await res.json();
@@ -86,7 +88,7 @@ async function buscarOpenLibrary(
     "title,author_name,cover_i,key,ia,ebook_access,public_scan_b",
   );
 
-  const res = await fetch(url.toString());
+  const res = await buscarExterno(url);
   if (!res.ok) throw new Error(`openlibrary ${res.status}`);
   const data = await res.json();
 
@@ -157,7 +159,7 @@ async function buscarGoogle(
   url.searchParams.set("maxResults", String(max));
   if (comChave && key) url.searchParams.set("key", key);
 
-  const res = await fetch(url.toString());
+  const res = await buscarExterno(url);
   if (!res.ok) throw new Error(`google ${res.status}`);
   const data = await res.json();
 

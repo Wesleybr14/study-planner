@@ -1,5 +1,25 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+// Headers de segurança básicos. Sem CSP por enquanto: o app embute YouTube,
+// archive.org, Google Books e PDFs de várias fontes, e uma CSP incompleta
+// quebraria os leitores.
+const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
+};
 
 export default nextConfig;

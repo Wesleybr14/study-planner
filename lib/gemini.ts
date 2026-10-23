@@ -3,14 +3,21 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 // Modelos em ordem de preferência. Se um estiver sobrecarregado/indisponível,
 // o app tenta o próximo automaticamente. (A disponibilidade do nível gratuito
-// varia, por isso mantemos vários.)
-const MODELOS = [
-  "gemini-3.5-flash-lite",
-  "gemini-3.8-flash",
-  "gemini-3.6-flash",
-  "gemini-flash-latest",
-  "gemini-flash-lite-latest",
-];
+// varia, por isso mantemos vários.) GEMINI_MODELS (separados por vírgula)
+// substitui a lista sem precisar de deploy quando o Google aposenta um modelo.
+const MODELOS_ENV = (process.env.GEMINI_MODELS ?? "")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+const MODELOS = MODELOS_ENV.length
+  ? MODELOS_ENV
+  : [
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-flash-latest",
+      "gemini-flash-lite-latest",
+    ];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

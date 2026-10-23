@@ -1,7 +1,10 @@
 import { supabase } from "./supabase";
 import {
   baixarNuvem,
+  caminhosDeRoteiros,
   exportarLocais,
+  mimeDe,
+  removerDoBucket,
   restaurarLocal,
   removerLocal,
   type TipoArquivo,
@@ -194,6 +197,8 @@ export async function restaurarBackup(value: unknown, substituir: boolean) {
     arquivos: Registro[] = [];
   let rpcIniciado = false,
     rollbackConfirmado = false;
+  // Ao substituir, os arquivos antigos na nuvem perdem suas linhas na restauração.
+  const antigos = substituir ? await caminhosDeRoteiros() : [];
   try {
     for (const a of b.arquivos ?? []) {
       const roteiro_id = mapa.get(a.roteiro_id)!;
@@ -213,7 +218,9 @@ export async function restaurarBackup(value: unknown, substituir: boolean) {
         const path = `${auth.user.id}/${roteiro_id}/${id}`;
         const up = await supabase.storage
           .from("arquivos")
-          .upload(path, blob, { contentType: a.mime || undefined });
+          .upload(path, blob, {
+            contentType: mimeDe(a.nome, a.mime) || undefined,
+          });
         if (up.error) throw up.error;
         enviados.push(path);
         arquivos.push({
@@ -242,6 +249,7 @@ export async function restaurarBackup(value: unknown, substituir: boolean) {
           " Verifique se a migração 7 foi aplicada. Em falhas de conexão, confira seus dados antes de repetir a importação.",
       );
     }
+    await removerDoBucket(antigos);
     return roteiros.length;
   } catch (e) {
     if (!rpcIniciado || rollbackConfirmado) {

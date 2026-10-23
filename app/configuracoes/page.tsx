@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { criarBackup, restaurarBackup } from "@/lib/backup";
+import { caminhosDeRoteiros, removerDoBucket } from "@/lib/arquivos";
 import AppShell from "@/components/AppShell";
 
 export default function Configuracoes() {
@@ -95,11 +96,13 @@ export default function Configuracoes() {
     setOcupado(true);
     setErro("");
     try {
+      const caminhos = await caminhosDeRoteiros();
       const { error } = await supabase
         .from("roteiros")
         .delete()
         .not("id", "is", null);
       if (error) throw error;
+      await removerDoBucket(caminhos);
       aviso("Todos os roteiros foram apagados.");
     } catch (e: any) {
       setErro(e.message ?? "Falha ao apagar.");

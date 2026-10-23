@@ -4,6 +4,8 @@
 //  - DOAJ — revistas de acesso aberto (todas as áreas).
 // Prioriza resultados com PDF acessível.
 
+import { buscarExterno } from "./http";
+
 export type Artigo = {
   titulo: string;
   autores: string;
@@ -53,7 +55,7 @@ async function buscarArxiv(consulta: string, max: number): Promise<Artigo[]> {
     consulta,
   )}&start=0&max_results=${max}`;
 
-  const res = await fetch(url, {
+  const res = await buscarExterno(url, {
     headers: { "User-Agent": "study-planner/1.0" },
   });
   if (!res.ok) throw new Error(`arxiv ${res.status}`);
@@ -101,7 +103,7 @@ async function buscarEpmc(consulta: string, max: number): Promise<Artigo[]> {
   url.searchParams.set("resultType", "core");
   url.searchParams.set("pageSize", String(Math.max(max * 2, 8)));
 
-  const res = await fetch(url.toString());
+  const res = await buscarExterno(url);
   if (!res.ok) throw new Error(`epmc ${res.status}`);
   const data = await res.json();
 
@@ -135,7 +137,7 @@ async function buscarDoaj(consulta: string, max: number): Promise<Artigo[]> {
     consulta,
   )}?pageSize=${Math.max(max * 2, 8)}`;
 
-  const res = await fetch(url);
+  const res = await buscarExterno(url);
   if (!res.ok) throw new Error(`doaj ${res.status}`);
   const data = await res.json();
 

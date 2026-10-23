@@ -5,13 +5,13 @@ const path = require("node:path");
 const { PGlite } = require("@electric-sql/pglite");
 const uid = "11111111-1111-4111-8111-111111111111",
   outro = "22222222-2222-4222-8222-222222222222";
-test("migração: cotas, isolamento de usuário e rollback real da restauração", async () => {
+test("migração: cotas (ia, busca e vídeo), bucket, isolamento de usuário e rollback real da restauração", async () => {
   const db = new PGlite();
   try {
     await db.exec(`create schema auth; create schema storage; create role anon; create role authenticated;
  create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
- create table storage.buckets(id text primary key,name text,public boolean);
+ create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
  create table storage.objects(id uuid, bucket_id text, name text);
  create function storage.foldername(text) returns text[] language sql immutable as $$ select string_to_array($1,'/') $$;
  insert into auth.users values('${uid}'),('${outro}');`);
@@ -20,10 +20,19 @@ test("migração: cotas, isolamento de usuário e rollback real da restauração
       "supabase-migration-4.sql",
       "supabase-migration-6.sql",
       "supabase-migration-7.sql",
+      "supabase-migration-8.sql",
     ])
       await db.exec(
         fs.readFileSync(path.resolve(__dirname, "..", file), "utf8"),
       );
+    assert.deepEqual(
+      (
+        await db.query(
+          "select file_size_limit::int as limite, allowed_mime_types as tipos from storage.buckets where id='arquivos'",
+        )
+      ).rows[0],
+      { limite: 52428800, tipos: ["application/pdf", "application/epub+zip"] },
+    );
     await db.exec(
       `grant usage on schema public,auth,storage to authenticated; grant all on all tables in schema public to authenticated; grant execute on all functions in schema auth to authenticated; set role authenticated; set app.uid='${uid}';`,
     );
@@ -36,6 +45,11 @@ test("migração: cotas, isolamento de usuário e rollback real da restauração
         .rows[0].permitido,
       true,
     );
+    const videos = await db.query(
+      "select public.consumir_cota('video') as permitido from generate_series(1,35)",
+    );
+    assert.equal(videos.rows.filter((r) => r.permitido).length, 30);
+    await assert.rejects(db.query("select public.consumir_cota('outra')"));
     const old = "33333333-3333-4333-8333-333333333333";
     await db.query(
       "insert into roteiros(id,user_id,tema,topicos) values($1,$2,'Antigo','[]')",

@@ -1,3 +1,5 @@
+import { buscarExterno } from "./http";
+
 const YOUTUBE_KEY = process.env.YOUTUBE_API_KEY;
 
 export async function buscarVideos(consulta: string, max = 3) {
@@ -10,7 +12,7 @@ export async function buscarVideos(consulta: string, max = 3) {
   url.searchParams.set("maxResults", String(max));
   url.searchParams.set("key", YOUTUBE_KEY);
 
-  const res = await fetch(url);
+  const res = await buscarExterno(url);
   if (!res.ok) return [];
 
   const data = await res.json();
