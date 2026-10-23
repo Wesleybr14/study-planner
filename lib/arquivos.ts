@@ -338,3 +338,36 @@ export function salvarNoComputador(blob: Blob, nome: string): void {
   // dá tempo do navegador iniciar o download antes de liberar a URL
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+export async function exportarLocais(roteiros: string[]) {
+  const db = await abrirBanco();
+  const todos = (await promessa(
+    db.transaction(LOJA, "readonly").objectStore(LOJA).getAll(),
+  )) as RegistroLocal[];
+  db.close();
+  return todos.filter((r) => roteiros.includes(r.escopo.split(":")[0]));
+}
+export async function restaurarLocal(registro: {
+  escopo: string;
+  tipo: TipoArquivo;
+  nome: string;
+  mime: string;
+  blob: Blob;
+}) {
+  const db = await abrirBanco();
+  const id = novoId();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(LOJA, "readwrite");
+    tx.objectStore(LOJA).put({
+      ...registro,
+      id,
+      tamanho: registro.blob.size,
+      criadoEm: Date.now(),
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+  db.close();
+  return id;
+}

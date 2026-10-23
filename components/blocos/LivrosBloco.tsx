@@ -1,5 +1,7 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import SeletorArquivos, {
   Aviso,
@@ -50,9 +52,11 @@ export default function LivrosBloco({
   compacto?: boolean;
 }) {
   const [livros, setLivros] = useState<any[]>([]);
+  const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [soGratis, setSoGratis] = useState(false);
   const [aberto, setAberto] = useState<number | null>(null);
+  const memoria = `material:Livros:${roteiroId}:${indice}`;
   const [sel, setSel] = useState("");
   const [aviso, setAviso] = useState("");
 
@@ -70,23 +74,36 @@ export default function LivrosBloco({
     let vivo = true;
     const q = topico?.buscaLivros ?? topico?.titulo ?? "";
     setCarregando(true);
+    setErroBusca("");
     setAberto(null);
-    setSel("");
-    fetch(
+    try {
+      setSel(localStorage.getItem(memoria) ?? "");
+    } catch {
+      setSel("");
+    }
+    apiFetch(
       `/api/search-books?q=${encodeURIComponent(q)}${soGratis ? "&gratis=1" : ""}`,
     )
       .then((r) => r.json())
       .then((d) => vivo && setLivros(Array.isArray(d) ? d : []))
-      .catch(() => vivo && setLivros([]))
+      .catch((e: Error) => {
+        if (vivo) {
+          setLivros([]);
+          setErroBusca(e.message);
+        }
+      })
       .finally(() => vivo && setCarregando(false));
     return () => {
       vivo = false;
     };
-  }, [topico?.buscaLivros, topico?.titulo, soGratis]);
+  }, [topico?.buscaLivros, topico?.titulo, soGratis, memoria]);
 
   const capa = (l: any) =>
     l.capa ? (
-      <img
+      <Image
+        unoptimized
+        width={56}
+        height={80}
         src={l.capa}
         alt=""
         referrerPolicy="no-referrer"
@@ -147,7 +164,7 @@ export default function LivrosBloco({
         k: `arq:${a.id}`,
         a,
       })),
-      ...livros.map((l, i) => ({ tipo: "web" as const, k: `web:${i}`, l })),
+      ...livros.map((l) => ({ tipo: "web" as const, k: `web:${l.url}`, l })),
     ];
     const atual = opcoes.find((o) => o.k === sel) ?? opcoes[0];
     const a = atual?.tipo === "arquivo" ? atual.a : null;
@@ -161,7 +178,12 @@ export default function LivrosBloco({
           {opcoes.length > 1 ? (
             <select
               value={atual?.k ?? ""}
-              onChange={(e) => setSel(e.target.value)}
+              onChange={(e) => {
+                setSel(e.target.value);
+                try {
+                  localStorage.setItem(memoria, e.target.value);
+                } catch {}
+              }}
               title="Trocar de livro/arquivo"
               className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
@@ -258,6 +280,7 @@ export default function LivrosBloco({
           <LeituraWeb livro={atual.l} />
         ) : (
           <p className="text-sm text-slate-400 dark:text-slate-500">
+            {erroBusca && <span role="alert">{erroBusca} </span>}
             {carregando
               ? "Buscando livros..."
               : `Nenhum livro encontrado${soGratis ? " gratuito" : ""}.`}
@@ -289,6 +312,7 @@ export default function LivrosBloco({
           Só gratuitos
         </label>
 
+        {erroBusca && <p role="alert">{erroBusca}</p>}
         {carregando && (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Buscando livros...

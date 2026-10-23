@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarFlashcards } from "@/lib/gemini";
-
+import { authorize, body, text, failure, ApiError } from "@/lib/api-server";
 export async function POST(req: NextRequest) {
   try {
-    const { titulo, descricao } = await req.json();
-    if (!titulo) {
-      return NextResponse.json({ erro: "Informe o título do tópico" }, { status: 400 });
-    }
-    const flashcards = await gerarFlashcards(titulo, descricao ?? "");
-    return NextResponse.json({ flashcards });
-  } catch (err: any) {
-    return NextResponse.json({ erro: err.message ?? "Erro ao gerar flashcards" }, { status: 500 });
+    await authorize(req, true);
+    const d = await body(req);
+    const value = await gerarFlashcards(
+      text(d.titulo, "Título"),
+      text(d.descricao, "Descrição", 4000, true),
+    );
+    return NextResponse.json({ flashcards: value });
+  } catch (error) {
+    return failure(error);
   }
 }

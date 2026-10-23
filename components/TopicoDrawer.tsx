@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDialog } from "./useDialog";
 import VideosBloco from "@/components/blocos/VideosBloco";
 import LivrosBloco from "@/components/blocos/LivrosBloco";
 import ArtigosBloco from "@/components/blocos/ArtigosBloco";
@@ -50,6 +51,7 @@ export default function TopicoDrawer({
   onSalvarTopico: (patch: Record<string, any>) => void;
   onExpandir: () => void;
 }) {
+  const painelRef = useDialog<HTMLElement>(aberto);
   const [aba, setAba] = useState<Aba>("videos");
   const [recarregar, setRecarregar] = useState(0);
 
@@ -73,7 +75,7 @@ export default function TopicoDrawer({
     };
   }, [aberto, onFechar]);
 
-  function duplicar() {
+  async function duplicar() {
     if (!topico) return;
     const copia = {
       ...topico,
@@ -92,8 +94,9 @@ export default function TopicoDrawer({
         ? [...topico.artigosEscolhidos]
         : [],
     };
-    onSalvarTopico({ _duplicarApos: true, _copia: copia } as any);
-    onFechar();
+    try {
+      await onSalvarTopico({ _duplicarApos: true, _copia: copia });
+    } catch {}
   }
 
   const painel = (id: Aba, conteudo: React.ReactNode) => (
@@ -111,6 +114,9 @@ export default function TopicoDrawer({
       />
 
       <aside
+        ref={painelRef}
+        tabIndex={-1}
+        inert={!aberto}
         role="dialog"
         aria-modal="true"
         aria-label={topico?.titulo ?? "Detalhes do tópico"}
@@ -210,7 +216,14 @@ export default function TopicoDrawer({
                 onSalvarTopico={onSalvarTopico}
               />,
             )}
-            {painel("quiz", <QuizBloco topico={topico} />)}
+            {painel(
+              "quiz",
+              <QuizBloco
+                key={topico.id ?? indice}
+                topico={topico}
+                onSalvarTopico={onSalvarTopico}
+              />,
+            )}
           </div>
         )}
 

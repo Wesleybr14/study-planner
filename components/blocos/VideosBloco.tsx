@@ -1,16 +1,21 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 /** Bloco de vídeos: busca no YouTube e reproduz embutido. */
 export default function VideosBloco({
   topico,
   compacto = false,
+  memoria,
 }: {
   topico: any;
   compacto?: boolean;
+  memoria?: string;
 }) {
   const [videos, setVideos] = useState<any[]>([]);
+  const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [sel, setSel] = useState<number | null>(null);
 
@@ -18,16 +23,32 @@ export default function VideosBloco({
     let vivo = true;
     const q = topico?.buscaVideos ?? topico?.titulo ?? "";
     setCarregando(true);
+    setErroBusca("");
     setSel(null);
-    fetch(`/api/search-videos?q=${encodeURIComponent(q)}`)
+    apiFetch(`/api/search-videos?q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
-      .then((d) => vivo && setVideos(Array.isArray(d) ? d : []))
-      .catch(() => vivo && setVideos([]))
+      .then((d) => {
+        if (!vivo) return;
+        const lista = Array.isArray(d) ? d : [];
+        setVideos(lista);
+        if (memoria)
+          try {
+            const salvo = localStorage.getItem(memoria);
+            const pos = lista.findIndex((v: any) => v.videoId === salvo);
+            if (pos >= 0) setSel(pos);
+          } catch {}
+      })
+      .catch((e: Error) => {
+        if (vivo) {
+          setVideos([]);
+          setErroBusca(e.message);
+        }
+      })
       .finally(() => vivo && setCarregando(false));
     return () => {
       vivo = false;
     };
-  }, [topico?.buscaVideos, topico?.titulo]);
+  }, [topico?.buscaVideos, topico?.titulo, memoria]);
 
   if (carregando)
     return (
@@ -35,6 +56,7 @@ export default function VideosBloco({
         Buscando vídeos...
       </p>
     );
+  if (erroBusca) return <p role="alert">{erroBusca}</p>;
   if (videos.length === 0)
     return (
       <p className="text-sm text-slate-400 dark:text-slate-500">
@@ -53,7 +75,14 @@ export default function VideosBloco({
           {varios ? (
             <select
               value={indice}
-              onChange={(e) => setSel(Number(e.target.value))}
+              onChange={(e) => {
+                const pos = Number(e.target.value);
+                setSel(pos);
+                if (memoria && videos[pos]?.videoId)
+                  try {
+                    localStorage.setItem(memoria, videos[pos].videoId);
+                  } catch {}
+              }}
               title="Trocar de vídeo"
               className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
@@ -119,7 +148,10 @@ export default function VideosBloco({
                 className="flex w-full gap-3 p-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 {v.thumbnail && (
-                  <img
+                  <Image
+                    unoptimized
+                    width={480}
+                    height={270}
                     src={v.thumbnail}
                     alt=""
                     className="h-14 w-24 shrink-0 rounded object-cover"
@@ -161,7 +193,10 @@ export default function VideosBloco({
             className="flex gap-3 rounded-lg bg-slate-50 p-2 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
             {v.thumbnail && (
-              <img
+              <Image
+                unoptimized
+                width={480}
+                height={270}
                 src={v.thumbnail}
                 alt=""
                 className="h-14 w-24 shrink-0 rounded object-cover"

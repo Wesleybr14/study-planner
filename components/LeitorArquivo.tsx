@@ -34,7 +34,7 @@ export default function LeitorArquivo({
     return () => {
       vivo = false;
     };
-  }, [arquivo.id, obterBlob]);
+  }, [arquivo, obterBlob]);
 
   if (erro)
     return <p className="p-3 text-sm text-red-600 dark:text-red-400">{erro}</p>;
@@ -170,11 +170,25 @@ function LeitorEpub({
         });
         livro.current = b;
         rend.current = r;
-        await r.display();
+        let posicao: string | undefined;
+        try {
+          posicao =
+            localStorage.getItem(`leitura-epub:${arquivo.id}`) ?? undefined;
+        } catch {}
+        try {
+          await r.display(posicao);
+        } catch {
+          await r.display();
+        }
         if (!vivo) return;
         setPronto(true);
 
         r.on("relocated", (loc: any) => {
+          if (!vivo) return;
+          try {
+            if (loc?.start?.cfi)
+              localStorage.setItem(`leitura-epub:${arquivo.id}`, loc.start.cfi);
+          } catch {}
           const total = b.locations?.length?.() ?? 0;
           const atual = b.locations?.locationFromCfi?.(loc?.start?.cfi) ?? 0;
           if (total) setPct(Math.round((atual / total) * 100));
@@ -195,7 +209,7 @@ function LeitorEpub({
       rend.current = null;
       livro.current = null;
     };
-  }, [blob]);
+  }, [blob, arquivo.id]);
 
   useEffect(() => {
     if (pronto) rend.current?.themes?.fontSize?.(`${fonte}%`);

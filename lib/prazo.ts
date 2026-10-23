@@ -1,9 +1,12 @@
 // Utilitários para metas/prazos de estudo.
 
 /** Dias restantes até a data (negativo = atrasado, null = sem prazo). */
-export function diasRestantes(prazo?: string | null): number | null {
+export function diasRestantes(
+  prazo?: string | null,
+  agora = new Date(),
+): number | null {
   if (!prazo) return null;
-  const hoje = new Date();
+  const hoje = new Date(agora);
   hoje.setHours(0, 0, 0, 0);
   const alvo = new Date(`${prazo}T00:00:00`);
   return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000);

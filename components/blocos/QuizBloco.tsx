@@ -1,10 +1,19 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState } from "react";
 
 /** Bloco de quiz: gera (IA), responde e corrige as perguntas do tópico. */
-export default function QuizBloco({ topico }: { topico: any }) {
-  const [quizzes, setQuizzes] = useState<any[]>([]);
+export default function QuizBloco({
+  topico,
+  onSalvarTopico,
+}: {
+  topico: any;
+  onSalvarTopico: (patch: Record<string, any>) => void | Promise<void>;
+}) {
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [quizzes, setQuizzes] = useState<any[]>(topico.quiz ?? []);
   const [gerando, setGerando] = useState(false);
   const [respostas, setRespostas] = useState<Record<number, number>>({});
   const [corrigido, setCorrigido] = useState(false);
@@ -14,7 +23,7 @@ export default function QuizBloco({ topico }: { topico: any }) {
     setCorrigido(false);
     setRespostas({});
     try {
-      const res = await fetch("/api/generate-quiz", {
+      const res = await apiFetch("/api/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -24,16 +33,48 @@ export default function QuizBloco({ topico }: { topico: any }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro ?? "Erro ao gerar quiz");
-      setQuizzes(data.perguntas ?? []);
+      await onSalvarTopico({ quiz: data.perguntas });
+      setQuizzes(data.perguntas);
     } catch (e: any) {
-      alert(e.message);
+      setErro(e.message);
     } finally {
       setGerando(false);
     }
   }
 
+  async function corrigir() {
+    setSalvando(true);
+    setErro("");
+    try {
+      const tentativa = {
+        data: new Date().toISOString(),
+        acertos: quizzes.filter((q, i) => respostas[i] === q.correta).length,
+        total: quizzes.length,
+      };
+      await onSalvarTopico({
+        tentativas: [...(topico.tentativas ?? []), tentativa],
+      });
+      setCorrigido(true);
+    } catch {
+      setErro("Não foi possível salvar o resultado. Tente novamente.");
+    } finally {
+      setSalvando(false);
+    }
+  }
   return (
     <div>
+      {erro && <p role="alert">{erro}</p>}
+      {(topico.tentativas ?? []).length > 0 && (
+        <p className="mb-2 text-xs">
+          Histórico:{" "}
+          {topico.tentativas
+            .map(
+              (t: any) =>
+                `${new Date(t.data).toLocaleDateString("pt-BR")}: ${t.acertos}/${t.total}`,
+            )
+            .join(" · ")}
+        </p>
+      )}
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">❓ Quiz</h3>
         <button
@@ -110,8 +151,12 @@ export default function QuizBloco({ topico }: { topico: any }) {
       {quizzes.length > 0 && (
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setCorrigido(true)}
-            disabled={corrigido}
+            onClick={corrigir}
+            disabled={
+              corrigido ||
+              salvando ||
+              Object.keys(respostas).length !== quizzes.length
+            }
             className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
           >
             Corrigir

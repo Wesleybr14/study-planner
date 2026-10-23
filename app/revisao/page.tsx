@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { atualizarRoteiro } from "@/lib/roteiros";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import {
@@ -26,6 +27,8 @@ type CardRef = {
 
 export default function Revisao() {
   const router = useRouter();
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [roteiros, setRoteiros] = useState<any[]>([]);
   const [fila, setFila] = useState<CardRef[]>([]);
@@ -37,15 +40,16 @@ export default function Revisao() {
     intervalo: number;
   } | null>(null);
 
-  useEffect(() => {
-    carregar();
-  }, []);
-
-  async function carregar() {
+  const carregar = useCallback(async () => {
     const { data: auth } = await supabase.auth.getSession();
     if (!auth.session) return router.replace("/login");
 
-    const { data } = await supabase.from("roteiros").select("*");
+    const { data, error } = await supabase.from("roteiros").select("*");
+    if (error) {
+      setErro(error.message);
+      setCarregando(false);
+      return;
+    }
     setRoteiros(data ?? []);
 
     const cards: CardRef[] = [];
@@ -75,9 +79,16 @@ export default function Revisao() {
     }
     setFila(cards);
     setCarregando(false);
-  }
+  }, [router]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   async function responder(q: Qualidade) {
+    if (salvando) return;
+    setSalvando(true);
+    setErro("");
     const card = fila[pos];
     const novo = revisar(card.estado, q);
 
@@ -93,13 +104,26 @@ export default function Revisao() {
         : t,
     );
 
-    setRoteiros((prev) =>
-      prev.map((r) => (r.id === card.roteiroId ? { ...r, topicos } : r)),
-    );
-    await supabase
-      .from("roteiros")
-      .update({ topicos })
-      .eq("id", card.roteiroId);
+    try {
+      const salvo = await atualizarRoteiro(
+        supabase,
+        card.roteiroId,
+        { topicos },
+        roteiro,
+      );
+      setRoteiros((prev) =>
+        prev.map((r) => (r.id === card.roteiroId ? salvo : r)),
+      );
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar a revisão.",
+      );
+      setSalvando(false);
+      return;
+    }
+    setSalvando(false);
 
     setUltimo({ qualidade: q, intervalo: novo.intervalo });
     setMostrar(false);
@@ -112,9 +136,11 @@ export default function Revisao() {
   return (
     <AppShell largura="foco">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">🔁 Revisão</h1>
+        <h1 className="text-2xl font-bold">Revisar para lembrar</h1>
       </header>
 
+      {erro && <p role="alert">{erro}</p>}
+      {salvando && <p role="status">Salvando revisão…</p>}
       {carregando ? (
         <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
       ) : fila.length === 0 ? (
@@ -169,18 +195,21 @@ export default function Revisao() {
           {mostrar && (
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button
+                disabled={salvando}
                 onClick={() => responder("dificil")}
                 className="rounded-lg bg-red-100 py-3 text-sm font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
               >
                 🔴 Difícil
               </button>
               <button
+                disabled={salvando}
                 onClick={() => responder("bom")}
                 className="rounded-lg bg-yellow-100 py-3 text-sm font-medium text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:hover:bg-yellow-900/60"
               >
                 🟡 Bom
               </button>
               <button
+                disabled={salvando}
                 onClick={() => responder("facil")}
                 className="rounded-lg bg-green-100 py-3 text-sm font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60"
               >

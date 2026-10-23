@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState } from "react";
 
@@ -17,7 +18,7 @@ export default function FlashcardsBloco({
   async function gerar() {
     setGerando(true);
     try {
-      const res = await fetch("/api/generate-flashcards", {
+      const res = await apiFetch("/api/generate-flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -28,7 +29,7 @@ export default function FlashcardsBloco({
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro ?? "Erro ao gerar");
       setVirados({});
-      onSalvarTopico({ flashcards: data.flashcards });
+      await onSalvarTopico({ flashcards: data.flashcards });
     } catch (e: any) {
       alert(e.message);
     } finally {

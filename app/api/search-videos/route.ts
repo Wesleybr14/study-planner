@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buscarVideos } from "@/lib/youtube";
-
+import { authorize, text, failure } from "@/lib/api-server";
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q") ?? "";
-  if (!q) return NextResponse.json([]);
-
-  const videos = await buscarVideos(q);
-  return NextResponse.json(videos);
+  try {
+    await authorize(req);
+    const q = text(req.nextUrl.searchParams.get("q"), "Busca", 500);
+    return NextResponse.json(await buscarVideos(q));
+  } catch (error) {
+    return failure(error);
+  }
 }

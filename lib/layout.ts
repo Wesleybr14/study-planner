@@ -273,28 +273,69 @@ export function normalizarArranjos(entrada: unknown): Arranjos {
 
 // ---------- Persistência (nuvem, por usuário) ----------
 
+type RascunhoArranjos = { arranjos: Arranjos; pendente: boolean };
+export function lerArranjosLocal(uid: string): RascunhoArranjos | null {
+  try {
+    const dado = JSON.parse(localStorage.getItem(`arranjos:${uid}`) ?? "null");
+    return dado?.arranjos
+      ? {
+          arranjos: normalizarArranjos(dado.arranjos),
+          pendente: !!dado.pendente,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+export function guardarArranjosLocal(
+  uid: string,
+  arranjos: Arranjos,
+  pendente = true,
+) {
+  localStorage.setItem(
+    `arranjos:${uid}`,
+    JSON.stringify({ arranjos, pendente }),
+  );
+}
 export async function carregarArranjos(): Promise<Arranjos | null> {
   const { data: auth } = await supabase.auth.getSession();
   const uid = auth.session?.user.id;
   if (!uid) return null;
-
-  const { data } = await supabase
-    .from("preferencias")
-    .select("layout")
-    .eq("user_id", uid)
-    .maybeSingle();
-
-  return data?.layout ? normalizarArranjos(data.layout) : null;
+  const local = lerArranjosLocal(uid);
+  if (local?.pendente) return local.arranjos;
+  try {
+    const { data, error } = await supabase
+      .from("preferencias")
+      .select("layout")
+      .eq("user_id", uid)
+      .maybeSingle();
+    if (error) return local?.arranjos ?? null;
+    return data?.layout
+      ? normalizarArranjos(data.layout)
+      : (local?.arranjos ?? null);
+  } catch {
+    return local?.arranjos ?? null;
+  }
 }
-
 export async function salvarArranjos(arranjos: Arranjos): Promise<void> {
   const { data: auth } = await supabase.auth.getSession();
   const uid = auth.session?.user.id;
-  if (!uid) return;
-
-  await supabase.from("preferencias").upsert({
-    user_id: uid,
-    layout: arranjos,
-    atualizado_em: new Date().toISOString(),
-  });
+  if (!uid)
+    throw new Error(
+      "Sessão expirada. Entre novamente para sincronizar o layout.",
+    );
+  const { error } = await supabase
+    .from("preferencias")
+    .upsert({
+      user_id: uid,
+      layout: arranjos,
+      atualizado_em: new Date().toISOString(),
+    });
+  if (error) throw new Error(error.message);
+  const local = lerArranjosLocal(uid);
+  if (!local || JSON.stringify(local.arranjos) === JSON.stringify(arranjos)) {
+    try {
+      guardarArranjosLocal(uid, arranjos, false);
+    } catch {}
+  }
 }

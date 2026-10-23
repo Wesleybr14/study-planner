@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Cronometro from "@/components/Cronometro";
 import {
   alternarTarefa,
@@ -152,19 +152,63 @@ export default function NotasBloco({
   indice,
   roteiroId,
   onSalvarTopico,
+  mostrarCronometro = true,
 }: {
+  mostrarCronometro?: boolean;
   topico: any;
   indice: number;
   roteiroId: string;
   onSalvarTopico: (patch: Record<string, any>) => void;
 }) {
+  const chave = `rascunho:${roteiroId}:${topico.id ?? indice}`;
   const [nota, setNota] = useState<string>(topico?.nota ?? "");
+  const [estado, setEstado] = useState("Carregando rascunho…");
+  const [pronto, setPronto] = useState(false);
+  const salvo = useRef(topico?.nota ?? "");
+  const salvarRef = useRef(onSalvarTopico);
+  salvarRef.current = onSalvarTopico;
+  useEffect(() => {
+    try {
+      const local = localStorage.getItem(chave);
+      if (local !== null) setNota(local);
+    } catch {}
+    setPronto(true);
+    setEstado("Salvo");
+  }, [chave]);
+  useEffect(() => {
+    if (!pronto || nota === salvo.current) return;
+    try {
+      localStorage.setItem(chave, nota);
+    } catch {}
+    setEstado("Salvando…");
+    let ativo = true;
+    const timer = setTimeout(async () => {
+      try {
+        await salvarRef.current({ nota });
+        salvo.current = nota;
+        try {
+          if (localStorage.getItem(chave) === nota)
+            localStorage.removeItem(chave);
+        } catch {}
+        if (ativo) setEstado("Salvo");
+      } catch {
+        if (ativo)
+          setEstado("Falha ao salvar. Rascunho preservado neste aparelho.");
+      }
+    }, 600);
+    return () => {
+      ativo = false;
+      clearTimeout(timer);
+    };
+  }, [nota, pronto, chave]);
   const [modo, setModo] = useState<"editar" | "ver">("editar");
   const ref = useRef<HTMLTextAreaElement>(null);
 
   function guardar(texto: string) {
     setNota(texto);
-    onSalvarTopico({ nota: texto });
+    try {
+      localStorage.setItem(chave, texto);
+    } catch {}
   }
 
   /** Cerca a seleção com uma marcação (ou insere o marcador vazio). */
@@ -264,12 +308,17 @@ export default function NotasBloco({
 
   return (
     <div className="space-y-3">
-      <Cronometro roteiroId={roteiroId} topicoIndex={indice} />
+      {mostrarCronometro && (
+        <Cronometro roteiroId={roteiroId} topicoIndex={indice} />
+      )}
       <div>
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">📝 Minhas anotações</h3>
-          <span className="text-xs text-slate-400 dark:text-slate-500">
-            salvo automaticamente
+          <span
+            role="status"
+            className="text-xs text-slate-400 dark:text-slate-500"
+          >
+            {estado}
           </span>
         </div>
 
@@ -345,7 +394,9 @@ export default function NotasBloco({
           <button
             type="button"
             onClick={() => {
-              onSalvarTopico({ nota });
+              Promise.resolve(onSalvarTopico({ nota })).catch(() =>
+                setEstado("Falha ao salvar"),
+              );
               setModo(modo === "editar" ? "ver" : "editar");
             }}
             title="Alternar entre editar e visualizar"
@@ -380,8 +431,8 @@ export default function NotasBloco({
             <textarea
               ref={ref}
               value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              onBlur={() => onSalvarTopico({ nota })}
+              onChange={(e) => guardar(e.target.value)}
+              aria-label="Anotações do tópico"
               rows={7}
               placeholder="Escreva aqui o que aprendeu, dúvidas, links..."
               className="w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm leading-relaxed outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"

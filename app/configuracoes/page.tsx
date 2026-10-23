@@ -3,17 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { criarBackup, restaurarBackup } from "@/lib/backup";
 import AppShell from "@/components/AppShell";
-
-/** Versão do formato de backup — muda se o schema evoluir de forma incompatível. */
-const VERSAO_BACKUP = 1;
-
-type Backup = {
-  versao: number;
-  exportado_em: string;
-  roteiros: any[];
-  preferencias?: any;
-};
 
 export default function Configuracoes() {
   const router = useRouter();
@@ -41,25 +32,7 @@ export default function Configuracoes() {
     setOcupado(true);
     setErro("");
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-
-      const [{ data: roteiros }, { data: pref }] = await Promise.all([
-        supabase.from("roteiros").select("*"),
-        supabase
-          .from("preferencias")
-          .select("layout")
-          .eq("user_id", userId ?? "")
-          .maybeSingle(),
-      ]);
-
-      const backup: Backup = {
-        versao: VERSAO_BACKUP,
-        exportado_em: new Date().toISOString(),
-        roteiros: roteiros ?? [],
-        preferencias: pref?.layout ?? null,
-      };
-
+      const backup = await criarBackup();
       const blob = new Blob([JSON.stringify(backup, null, 2)], {
         type: "application/json;charset=utf-8",
       });
@@ -88,57 +61,19 @@ export default function Configuracoes() {
     setOcupado(true);
     setErro("");
     try {
-      const texto = await arquivo.text();
-      const dados = JSON.parse(texto) as Backup;
-      if (!dados || !Array.isArray(dados.roteiros)) {
-        throw new Error("Arquivo inválido: não encontrei a lista de roteiros.");
-      }
-
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      if (!userId) throw new Error("Sessão expirada. Entre novamente.");
-
-      if (apagarAntes) {
-        const { error } = await supabase
-          .from("roteiros")
-          .delete()
-          .not("id", "is", null);
-        if (error) throw error;
-      }
-
-      let importados = 0;
-      for (const r of dados.roteiros) {
-        const base = {
-          user_id: userId,
-          tema: r.tema ?? "Sem título",
-          descricao: r.descricao ?? "",
-          topicos: r.topicos ?? [],
-          progresso: r.progresso ?? 0,
-          prazo: r.prazo ?? null,
-        };
-        const comTags = { ...base, tags: r.tags ?? [] };
-
-        // Tenta com tags; se a coluna ainda não existir (migração 5), cai para sem tags.
-        let { error } = await supabase.from("roteiros").insert(comTags);
-        if (error) {
-          ({ error } = await supabase.from("roteiros").insert(base));
-        }
-        if (error) throw error;
-        importados++;
-      }
-
-      // Restaura o layout dos arranjos, se houver.
-      if (dados.preferencias) {
-        await supabase.from("preferencias").upsert(
-          {
-            user_id: userId,
-            layout: dados.preferencias,
-            atualizado_em: new Date().toISOString(),
-          },
-          { onConflict: "user_id" },
+      if (arquivo.size > 300 * 1024 * 1024)
+        throw new Error(
+          "Backup maior que 300 MB. Divida seus arquivos antes de importar.",
         );
-      }
-
+      const dados: unknown = JSON.parse(await arquivo.text());
+      if (
+        apagarAntes &&
+        !window.confirm(
+          "Substituir os dados atuais pelo backup? A validação e a restauração serão feitas antes de confirmar a troca.",
+        )
+      )
+        return;
+      const importados = await restaurarBackup(dados, apagarAntes);
       aviso(
         `Importados ${importados} ${importados === 1 ? "roteiro" : "roteiros"}.`,
       );
@@ -181,7 +116,7 @@ export default function Configuracoes() {
   return (
     <AppShell largura="foco">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">⚙️ Configurações</h1>
+        <h1 className="text-2xl font-bold">Configurações</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Backup, restauração e gerenciamento dos seus dados.
         </p>
@@ -206,7 +141,9 @@ export default function Configuracoes() {
             <h2 className="mb-1 font-semibold">⬇️ Exportar backup</h2>
             <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
               Baixa um arquivo <code>.json</code> com todos os seus roteiros,
-              tópicos, anotações, flashcards, tags e arranjos do workspace.
+              tópicos, anotações, flashcards, quizzes, sessões, tags, arranjos e
+              arquivos PDF/EPUB deste navegador e da nuvem. O download pode
+              demorar conforme o tamanho dos arquivos.
             </p>
             <button onClick={exportar} disabled={ocupado} className={botao}>
               Exportar backup (.json)
@@ -216,8 +153,9 @@ export default function Configuracoes() {
           <section className={card}>
             <h2 className="mb-1 font-semibold">⬆️ Importar backup</h2>
             <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-              Restaura os roteiros a partir de um arquivo exportado
-              anteriormente. Os itens são adicionados à sua conta.
+              Restaura os dados a partir de um arquivo exportado anteriormente.
+              Os itens são adicionados à sua conta. Backups antigos (v1) não
+              contêm sessões nem arquivos.
             </p>
             <label className="mb-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
               <input

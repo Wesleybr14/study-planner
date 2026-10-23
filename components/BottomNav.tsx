@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "./Icon";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -17,32 +18,32 @@ export default function BottomNav() {
   }
 
   const item = (ativo: boolean) =>
-    `flex-1 py-3 text-center text-xs ${ativo ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`;
+    `mobile-nav-item ${ativo ? "is-active" : ""}`;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
+    <nav className="mobile-nav" aria-label="Navegação principal">
       <div className="mx-auto flex max-w-2xl">
         <Link href="/dashboard" className={item(pathname === "/dashboard")}>
-          <div className="text-lg">🏠</div>
+          <Icon name="home" size={20} />
           Início
         </Link>
         <button onClick={irParaNovo} className={item(false)}>
-          <div className="text-lg">➕</div>
+          <Icon name="plus" size={20} />
           Novo
         </button>
         <Link href="/cronometro" className={item(pathname === "/cronometro")}>
-          <div className="text-lg">⏱</div>
+          <Icon name="clock" size={20} />
           Foco
         </Link>
         <Link href="/revisao" className={item(pathname === "/revisao")}>
-          <div className="text-lg">🔁</div>
+          <Icon name="repeat" size={20} />
           Revisar
         </Link>
         <Link
           href="/estatisticas"
           className={item(pathname === "/estatisticas")}
         >
-          <div className="text-lg">📊</div>
+          <Icon name="chart" size={20} />
           Progresso
         </Link>
       </div>

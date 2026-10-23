@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState } from "react";
 import SeletorArquivos, {
@@ -33,8 +34,10 @@ export default function ArtigosBloco({
   compacto?: boolean;
 }) {
   const [artigos, setArtigos] = useState<any[]>([]);
+  const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [aberto, setAberto] = useState<number | null>(null);
+  const memoria = `material:Artigos:${roteiroId}:${indice}`;
   const [sel, setSel] = useState("");
   const [aviso, setAviso] = useState("");
 
@@ -53,17 +56,27 @@ export default function ArtigosBloco({
     const q =
       topico?.buscaArtigos ?? topico?.buscaLivros ?? topico?.titulo ?? "";
     setCarregando(true);
+    setErroBusca("");
     setAberto(null);
-    setSel("");
-    fetch(`/api/search-articles?q=${encodeURIComponent(q)}`)
+    try {
+      setSel(localStorage.getItem(memoria) ?? "");
+    } catch {
+      setSel("");
+    }
+    apiFetch(`/api/search-articles?q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
       .then((d) => vivo && setArtigos(Array.isArray(d) ? d : []))
-      .catch(() => vivo && setArtigos([]))
+      .catch((e: Error) => {
+        if (vivo) {
+          setArtigos([]);
+          setErroBusca(e.message);
+        }
+      })
       .finally(() => vivo && setCarregando(false));
     return () => {
       vivo = false;
     };
-  }, [topico?.buscaArtigos, topico?.buscaLivros, topico?.titulo]);
+  }, [topico?.buscaArtigos, topico?.buscaLivros, topico?.titulo, memoria]);
 
   const metaArtigo = (a: any) => (
     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -107,7 +120,11 @@ export default function ArtigosBloco({
         k: `arq:${a.id}`,
         a,
       })),
-      ...artigos.map((a2, i) => ({ tipo: "web" as const, k: `web:${i}`, a2 })),
+      ...artigos.map((a2) => ({
+        tipo: "web" as const,
+        k: `web:${a2.url}`,
+        a2,
+      })),
     ];
     const atual = opcoes.find((o) => o.k === sel) ?? opcoes[0];
     const f = atual?.tipo === "arquivo" ? atual.a : null;
@@ -121,7 +138,12 @@ export default function ArtigosBloco({
           {opcoes.length > 1 ? (
             <select
               value={atual?.k ?? ""}
-              onChange={(e) => setSel(e.target.value)}
+              onChange={(e) => {
+                setSel(e.target.value);
+                try {
+                  localStorage.setItem(memoria, e.target.value);
+                } catch {}
+              }}
               title="Trocar de artigo/arquivo"
               className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
@@ -226,6 +248,7 @@ export default function ArtigosBloco({
           </div>
         ) : (
           <p className="text-sm text-slate-400 dark:text-slate-500">
+            {erroBusca && <span role="alert">{erroBusca} </span>}
             {carregando ? "Buscando artigos..." : "Nenhum artigo encontrado."}
           </p>
         )}
@@ -248,6 +271,7 @@ export default function ArtigosBloco({
       />
 
       <div className="space-y-2">
+        {erroBusca && <p role="alert">{erroBusca}</p>}
         {carregando && (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Buscando artigos...

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
@@ -21,6 +21,7 @@ function inicioDoDia(d: Date): Date {
 
 export default function Estatisticas() {
   const router = useRouter();
+  const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [sessoes, setSessoes] = useState<any[]>([]);
   const [roteiros, setRoteiros] = useState<any[]>([]);
@@ -30,15 +31,11 @@ export default function Estatisticas() {
     topicos: 0,
   });
 
-  useEffect(() => {
-    carregar();
-  }, []);
-
-  async function carregar() {
+  const carregar = useCallback(async () => {
     const { data: auth } = await supabase.auth.getSession();
     if (!auth.session) return router.replace("/login");
 
-    const [{ data: s }, { data: r }] = await Promise.all([
+    const [{ data: s, error: e1 }, { data: r, error: e2 }] = await Promise.all([
       supabase
         .from("sessoes")
         .select("segundos, criado_em, roteiro_id, topico_index")
@@ -46,6 +43,7 @@ export default function Estatisticas() {
       supabase.from("roteiros").select("id, tema, topicos"),
     ]);
 
+    if (e1 || e2) setErro((e1 ?? e2)!.message);
     setSessoes(s ?? []);
     setRoteiros(r ?? []);
     const totalTopicos = (r ?? []).reduce(
@@ -63,7 +61,11 @@ export default function Estatisticas() {
       topicos: totalTopicos,
     });
     setCarregando(false);
-  }
+  }, [router]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const hoje = inicioDoDia(new Date());
   const totalMin = sessoes.reduce((a, s) => a + s.segundos, 0) / 60;
@@ -120,14 +122,22 @@ export default function Estatisticas() {
     if (!s.roteiro_id) return "Sessão livre";
     const r = roteiros.find((x) => x.id === s.roteiro_id);
     if (!r) return "Roteiro removido";
-    const t = r.topicos?.[s.topico_index];
+    const t = r.topicos?.find(
+      (t: any, i: number) => (t.recursoIndex ?? i) === s.topico_index,
+    );
     return t ? `${r.tema} · ${t.titulo}` : r.tema;
   }
 
   return (
     <AppShell>
+      {erro && (
+        <p role="alert">
+          Não foi possível carregar os dados: {erro}{" "}
+          <button onClick={carregar}>Tentar novamente</button>
+        </p>
+      )}
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">📊 Estatísticas</h1>
+        <h1 className="text-2xl font-bold">Seu progresso</h1>
       </header>
 
       {carregando ? (

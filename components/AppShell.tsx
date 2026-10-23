@@ -5,14 +5,17 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ThemeToggle from "@/components/ThemeToggle";
+import Icon, { Brand, type IconName } from "./Icon";
+import { useDialog } from "./useDialog";
 import BottomNav from "@/components/BottomNav";
 
 /** Itens de navegação comuns a todas as páginas internas. */
-const NAV = [
-  { href: "/cronometro", icone: "⏱", rotulo: "Foco" },
-  { href: "/revisao", icone: "🔁", rotulo: "Revisar" },
-  { href: "/estatisticas", icone: "📊", rotulo: "Progresso" },
-  { href: "/configuracoes", icone: "⚙️", rotulo: "Ajustes" },
+const NAV: { href: string; icone: IconName; rotulo: string }[] = [
+  { href: "/dashboard", icone: "home", rotulo: "Meus estudos" },
+  { href: "/cronometro", icone: "clock", rotulo: "Tempo de foco" },
+  { href: "/revisao", icone: "repeat", rotulo: "Revisão" },
+  { href: "/estatisticas", icone: "chart", rotulo: "Meu progresso" },
+  { href: "/configuracoes", icone: "settings", rotulo: "Configurações" },
 ];
 
 /**
@@ -49,17 +52,12 @@ export default function AppShell({
     router.replace("/login");
   }
 
-  const base =
-    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition";
-  const itemAtivo =
-    "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
-  const itemInativo =
-    "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800";
   const container =
     largura === "foco" ? "max-w-2xl" : largura === "total" ? "" : "max-w-6xl";
 
   const [foco, setFoco] = useState(false);
   const [ajuda, setAjuda] = useState(false);
+  const ajudaRef = useDialog<HTMLDivElement>(ajuda);
 
   // Lê a preferência de modo foco salva.
   useEffect(() => {
@@ -87,7 +85,7 @@ export default function AppShell({
         (alvo.tagName === "INPUT" ||
           alvo.tagName === "TEXTAREA" ||
           alvo.isContentEditable);
-      if (digitando) return;
+      if (digitando || alvo?.closest('[role="dialog"]')) return;
       if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         alternarFoco();
@@ -102,140 +100,144 @@ export default function AppShell({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  const pagina = NAV.find((n) => ativo(n.href))?.rotulo ?? "Meu roteiro";
   return (
-    <div className="min-h-screen">
-      {/* Barra lateral (desktop) */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200 bg-white px-3 py-4 md:flex dark:border-slate-800 dark:bg-slate-900 ${
-          foco ? "md:hidden" : ""
-        }`}
-      >
-        <Link href="/dashboard" className="mb-6 px-2 text-lg font-bold">
-          📚 Study Planner
-        </Link>
-
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-          <Link
-            href="/dashboard"
-            className={`${base} ${ativo("/dashboard") ? itemAtivo : itemInativo}`}
-          >
-            <span className="text-base">🏠</span> Início
+    <div className="study-shell">
+      <a className="skip-link" href="#conteudo">
+        Pular para o conteúdo
+      </a>
+      {!foco && (
+        <aside className="study-sidebar">
+          <Link href="/dashboard" aria-label="Study Planner — início">
+            <Brand />
           </Link>
-
-          <button onClick={irParaNovo} className={`${base} ${itemInativo}`}>
-            <span className="text-base">➕</span> Novo
+          <div className="sidebar-section-label">SEU ESPAÇO DE APRENDIZADO</div>
+          <nav aria-label="Navegação principal" className="sidebar-nav">
+            {NAV.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={ativo(n.href) ? "page" : undefined}
+                className={`sidebar-link ${ativo(n.href) ? "is-active" : ""}`}
+              >
+                <Icon name={n.icone} />
+                {n.rotulo}
+                {ativo(n.href) && <span className="nav-dot" />}
+              </Link>
+            ))}
+          </nav>
+          <button className="sidebar-create" onClick={irParaNovo}>
+            <Icon name="plus" size={18} /> Novo roteiro
           </button>
-
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={`${base} ${ativo(n.href) ? itemAtivo : itemInativo}`}
+          <div className="sidebar-note">
+            <Icon name="leaf" size={25} />
+            <p>
+              Um pouco por dia.
+              <br />
+              <strong>Um mundo de possibilidades.</strong>
+            </p>
+            <span>Respeite o seu ritmo.</span>
+          </div>
+          <div className="sidebar-tools">
+            <button onClick={alternarFoco} title="Modo foco (F)">
+              <Icon name="focus" size={18} /> Modo foco <kbd>F</kbd>
+            </button>
+            <button
+              onClick={() => setAjuda(true)}
+              title="Atalhos de teclado (?)"
             >
-              <span className="text-base">{n.icone}</span> {n.rotulo}
-            </Link>
-          ))}
-        </nav>
-
-        <button
-          onClick={alternarFoco}
-          className={`${base} ${itemInativo}`}
-          title="Modo foco (F) — esconde o menu"
-        >
-          <span className="text-base">🎯</span> Modo foco
-        </button>
-        <button
-          onClick={() => setAjuda(true)}
-          className={`${base} ${itemInativo}`}
-          title="Atalhos de teclado (?)"
-        >
-          <span className="text-base">⌨️</span> Atalhos
-        </button>
-
-        <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ThemeToggle />
-          <button
-            onClick={sair}
-            className="text-sm text-slate-500 hover:text-red-500 dark:text-slate-400"
-          >
-            Sair
-          </button>
-        </div>
-      </aside>
-
-      {/* Conteúdo */}
-      <div className={foco ? "" : "md:ml-64"}>
-        {/* Barra de topo (celular) */}
-        <header
-          className={`sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/90 ${
-            foco ? "hidden" : ""
-          }`}
-        >
-          <Link href="/dashboard" className="font-bold">
-            📚 Study Planner
-          </Link>
-          <div className="flex items-center gap-3">
+              <Icon name="keyboard" size={18} /> Atalhos <kbd>?</kbd>
+            </button>
+          </div>
+          <div className="sidebar-footer">
             <ThemeToggle />
             <button
               onClick={sair}
-              className="text-sm text-slate-500 hover:text-red-500 dark:text-slate-400"
+              className="signout"
+              aria-label="Sair da conta"
             >
-              Sair
+              <Icon name="logout" size={18} />
             </button>
           </div>
-        </header>
-
-        <main className={`mx-auto w-full ${container} p-6 pb-24 md:pb-6`}>
-          {children}
-        </main>
-      </div>
-
-      <BottomNav />
-
-      {/* Botão flutuante para sair do modo foco */}
-      {foco && (
-        <button
-          onClick={alternarFoco}
-          title="Sair do modo foco (F)"
-          className="fixed bottom-4 right-4 z-40 rounded-full bg-slate-900/80 px-3 py-2 text-sm text-white shadow-lg backdrop-blur hover:bg-slate-900 dark:bg-white/80 dark:text-slate-900"
-        >
-          🎯 Sair do foco
-        </button>
+        </aside>
       )}
-
-      {/* Ajuda de atalhos */}
-      {ajuda && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setAjuda(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:border dark:border-slate-800 dark:bg-slate-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold">⌨️ Atalhos de teclado</h2>
+      <div className={`study-content ${foco ? "focus-mode" : ""}`}>
+        {!foco && (
+          <header className="study-topbar">
+            <Link href="/dashboard" className="mobile-brand">
+              <Brand />
+            </Link>
+            <div className="topbar-breadcrumb">
+              <span>Meu espaço</span>
+              <span>/</span>
+              <strong>{pagina}</strong>
+            </div>
+            <div className="topbar-right">
+              <span className="topbar-motto">
+                <span className="status-dot" /> Cada passo conta
+              </span>
+              <span className="mobile-theme">
+                <ThemeToggle />
+              </span>
               <button
-                onClick={() => setAjuda(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                className="profile-mark"
+                onClick={sair}
+                title="Sair da conta"
+                aria-label="Sair da conta"
               >
-                ✕
+                <Icon name="leaf" size={19} />
               </button>
             </div>
-            <ul className="space-y-2 text-sm">
+          </header>
+        )}
+        <main
+          id="conteudo"
+          className={`study-main mx-auto w-full ${container}`}
+          tabIndex={-1}
+        >
+          {children}
+          <footer className="page-footer">
+            <span>Aprender é uma jornada. Aproveite o caminho.</span>
+            <span>Study Planner</span>
+          </footer>
+        </main>
+      </div>
+      {!foco && <BottomNav />}
+      {foco && (
+        <button onClick={alternarFoco} className="focus-exit">
+          <Icon name="focus" size={18} /> Sair do foco <kbd>F</kbd>
+        </button>
+      )}
+      {ajuda && (
+        <div className="dialog-backdrop" onClick={() => setAjuda(false)}>
+          <div
+            ref={ajudaRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="atalhos-titulo"
+            className="shortcut-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 id="atalhos-titulo">Atalhos para o seu ritmo</h2>
+              <button
+                onClick={() => setAjuda(false)}
+                aria-label="Fechar atalhos"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <ul>
               {[
-                ["F", "Modo foco (esconde o menu)"],
-                ["?", "Mostrar/ocultar esta ajuda"],
-                ["Esc", "Fechar painel, workspace ou ajuda"],
-                ["Espaço", "Iniciar/pausar o cronômetro (com ele em foco)"],
-              ].map(([tecla, desc]) => (
-                <li key={tecla} className="flex items-center gap-3">
-                  <kbd className="rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium dark:border-slate-600 dark:bg-slate-800">
-                    {tecla}
-                  </kbd>
-                  <span className="text-slate-600 dark:text-slate-300">
-                    {desc}
-                  </span>
+                ["F", "Entrar ou sair do modo foco"],
+                ["?", "Abrir os atalhos"],
+                ["Esc", "Fechar painéis e ajuda"],
+                ["Espaço", "Iniciar ou pausar o cronômetro em foco"],
+              ].map(([key, desc]) => (
+                <li key={key}>
+                  <kbd>{key}</kbd>
+                  <span>{desc}</span>
                 </li>
               ))}
             </ul>

@@ -1,18 +1,26 @@
 "use client";
+import { atualizarRoteiro } from "@/lib/roteiros";
+import { apiFetch } from "@/lib/api-client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  identificarTopicos,
+  progresso as calcularProgresso,
+} from "@/lib/models";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
 import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
+import PlanejamentoEditor from "@/components/PlanejamentoEditor";
 import AppShell from "@/components/AppShell";
-import TopicoDrawer from "@/components/TopicoDrawer";
+import SalaEstudo from "@/components/SalaEstudo";
 import WorkspaceBlocos from "@/components/WorkspaceBlocos";
 import { carregarArranjos, topicKey, type Arranjos } from "@/lib/layout";
 
 type Flashcard = { frente: string; verso: string };
 
 type Topico = {
+  id: string;
   titulo: string;
   nivel: string;
   descricao: string;
@@ -27,6 +35,11 @@ type Topico = {
 export default function TemaPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const fila = useRef(Promise.resolve());
+  const persistido = useRef<any>(null);
+  const roteiroRef = useRef<any>(null);
   const [roteiro, setRoteiro] = useState<any>(null);
   const [concluidos, setConcluidos] = useState<boolean[]>([]);
   const [aberto, setAberto] = useState<number | null>(null);
@@ -36,8 +49,11 @@ export default function TemaPage() {
   const [arranjos, setArranjos] = useState<Arranjos | null>(null);
 
   useEffect(() => {
-    carregar();
-  }, [id]);
+    if (aberto !== null && roteiro?.topicos[aberto]?.id)
+      try {
+        localStorage.setItem(`ultimo-topico:${id}`, roteiro.topicos[aberto].id);
+      } catch {}
+  }, [aberto, id, roteiro]);
 
   // Arranjos do workspace (para sinalizar quais tópicos têm arranjo próprio).
   useEffect(() => {
@@ -50,7 +66,9 @@ export default function TemaPage() {
 
   /** Tópico com arranjo próprio (editou à mão ou aplicou um arranjo só pra ele). */
   function temArranjoProprio(i: number): boolean {
-    return !!arranjos?.trabalho[topicKey(id, i)];
+    return !!arranjos?.trabalho[
+      topicKey(id, roteiro?.topicos[i]?.recursoIndex ?? i)
+    ];
   }
 
   // Ao fechar o workspace, recarrega os arranjos para atualizar os marcadores.
@@ -62,15 +80,14 @@ export default function TemaPage() {
     }
     if (workspaceAberto.current) {
       workspaceAberto.current = false;
-      carregarArranjosDoUsuario();
+      carregarArranjos().then(setArranjos);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandido]);
 
   /** Nome do arranjo escolhido para o tópico, quando houver. */
   function nomeArranjo(i: number): string | null {
     if (!arranjos) return null;
-    const k = topicKey(id, i);
+    const k = topicKey(id, roteiro?.topicos[i]?.recursoIndex ?? i);
     const esc = arranjos.escolha[k];
     if (!esc || esc === "custom") return null;
     if (esc.startsWith("preset:")) return esc.slice("preset:".length);
@@ -81,58 +98,141 @@ export default function TemaPage() {
     setArranjos(await carregarArranjos());
   }
 
-  async function carregar() {
-    const { data } = await supabase
+  const carregar = useCallback(async () => {
+    const { data, error } = await supabase
       .from("roteiros")
       .select("*")
       .eq("id", id)
       .single();
-    if (!data) return router.replace("/dashboard");
+    if (error || !data) {
+      setErro(error?.message ?? "Roteiro não encontrado.");
+      return;
+    }
+    persistido.current = { ...data };
+    const originais = data.topicos;
+    data.topicos = identificarTopicos(data.topicos);
+    if (JSON.stringify(originais) !== JSON.stringify(data.topicos)) {
+      try {
+        persistido.current = await atualizarRoteiro(
+          supabase,
+          id,
+          { topicos: data.topicos },
+          persistido.current,
+        );
+        data.versao = persistido.current.versao;
+      } catch {
+        setErro(
+          "O roteiro foi aberto, mas não foi possível sincronizar os tópicos. Suas próximas alterações poderão ser salvas novamente.",
+        );
+      }
+    }
+    roteiroRef.current = data;
     setRoteiro(data);
+    try {
+      localStorage.setItem(
+        "ultimo-estudo",
+        JSON.stringify({ id, tema: data.tema }),
+      );
+      const query = new URLSearchParams(window.location.search);
+      const solicitado = query.has("topico")
+        ? Number(query.get("topico"))
+        : data.topicos.findIndex(
+            (t: any) => t.id === localStorage.getItem(`ultimo-topico:${id}`),
+          );
+      if (
+        Number.isInteger(solicitado) &&
+        solicitado >= 0 &&
+        solicitado < data.topicos.length
+      )
+        setAberto(solicitado);
+      else if (data.topicos.length) setAberto(0);
+    } catch {}
     setConcluidos(data.topicos.map((t: any) => !!t.concluido));
+  }, [id, setAberto]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function gravar(patch: Record<string, unknown>) {
+    const tarefa = fila.current
+      .catch(() => {})
+      .then(async () => {
+        persistido.current = await atualizarRoteiro(
+          supabase,
+          id,
+          patch,
+          persistido.current,
+        );
+      });
+    fila.current = tarefa;
+    return tarefa;
   }
 
   async function salvarTopicos(topicos: any[]) {
-    setRoteiro((r: any) => ({ ...r, topicos }));
-    await supabase.from("roteiros").update({ topicos }).eq("id", id);
+    const anterior = roteiroRef.current;
+    const novo = {
+      ...anterior,
+      topicos,
+      progresso: calcularProgresso(topicos),
+    };
+    roteiroRef.current = novo;
+    setRoteiro(novo);
+    setConcluidos(topicos.map((t) => !!t.concluido));
+    setSalvando(true);
+    setErro("");
+    const tarefa = gravar({ topicos, progresso: novo.progresso });
+    try {
+      await tarefa;
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Falha ao salvar. Tente novamente.",
+      );
+      throw error;
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function alternar(i: number) {
-    const novos = [...concluidos];
-    novos[i] = !novos[i];
-    setConcluidos(novos);
-
-    const topicos = roteiro.topicos.map((t: any, idx: number) => ({
-      ...t,
-      concluido: novos[idx],
-    }));
-    const progresso = Math.round(
-      (novos.filter(Boolean).length / novos.length) * 100,
-    );
-
-    await supabase.from("roteiros").update({ topicos, progresso }).eq("id", id);
-    setRoteiro({ ...roteiro, topicos, progresso });
+    try {
+      await salvarTopicos(
+        roteiroRef.current.topicos.map((t: any, idx: number) =>
+          idx === i ? { ...t, concluido: !t.concluido } : t,
+        ),
+      );
+    } catch {}
   }
 
   // Aplica alterações em um único tópico (usado pelo drawer).
-  function salvarTopico(patch: Record<string, any>) {
+  async function salvarTopico(patch: Record<string, any>) {
     if (aberto === null) return;
 
     if ((patch as any)._duplicarApos) {
-      const copia = (patch as any)._copia;
+      const copia = {
+        ...(patch as any)._copia,
+        id: crypto.randomUUID(),
+        recursoIndex:
+          Math.max(
+            ...roteiroRef.current.topicos.map((t: any) => t.recursoIndex),
+          ) + 1,
+        concluido: false,
+      };
       const idx = aberto;
-      const topicos = [...roteiro.topicos];
+      const topicos = [...roteiroRef.current.topicos];
       topicos.splice(idx + 1, 0, copia);
-      salvarTopicos(topicos);
+      await salvarTopicos(topicos);
       setAberto(idx + 1);
       setExpandido(false);
       return;
     }
 
-    const topicos = roteiro.topicos.map((t: any, idx: number) =>
+    const topicos = roteiroRef.current.topicos.map((t: any, idx: number) =>
       idx === aberto ? { ...t, ...patch } : t,
     );
-    salvarTopicos(topicos);
+    await salvarTopicos(topicos);
   }
 
   // Regenera os termos de busca (vídeos, livros e artigos) usando IA — útil para
@@ -148,7 +248,7 @@ export default function TemaPage() {
     setAtualizando(true);
     try {
       const titulos = roteiro.topicos.map((t: any) => t.titulo);
-      const res = await fetch("/api/refresh-searches", {
+      const res = await apiFetch("/api/refresh-searches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ titulos }),
@@ -156,7 +256,7 @@ export default function TemaPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro ?? "Erro ao atualizar buscas");
 
-      const topicos = roteiro.topicos.map((t: any, i: number) => ({
+      const topicos = roteiroRef.current.topicos.map((t: any, i: number) => ({
         ...t,
         buscaVideos: data.buscas[i]?.buscaVideos ?? t.buscaVideos,
         buscaLivros: data.buscas[i]?.buscaLivros ?? t.buscaLivros,
@@ -170,25 +270,25 @@ export default function TemaPage() {
     }
   }
 
-  function mover(atual: number, destino: number) {
+  async function mover(atual: number, destino: number) {
     if (destino < 0 || destino >= roteiro.topicos.length) return;
-    const topicos = [...roteiro.topicos];
+    const topicos = [...roteiroRef.current.topicos];
     const [item] = topicos.splice(atual, 1);
     topicos.splice(destino, 0, item);
-    salvarTopicos(topicos);
-    setConcluidos((c) => {
-      const novo = [...c];
-      const [v] = novo.splice(atual, 1);
-      novo.splice(destino, 0, v);
-      return novo;
-    });
-    if (aberto === atual) setAberto(destino);
-    else if (aberto === destino) setAberto(atual);
+    const selecionado =
+      aberto !== null ? roteiroRef.current.topicos[aberto]?.id : null;
+    if (selecionado) setAberto(topicos.findIndex((t) => t.id === selecionado));
+    await salvarTopicos(topicos);
   }
 
   async function salvarTags(tags: string[]) {
     setRoteiro((r: any) => ({ ...r, tags }));
-    await supabase.from("roteiros").update({ tags }).eq("id", id);
+    try {
+      await gravar({ tags });
+      roteiroRef.current = { ...roteiroRef.current, tags };
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Falha ao salvar tags.");
+    }
   }
 
   function adicionarTag() {
@@ -207,7 +307,24 @@ export default function TemaPage() {
   if (!roteiro) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
+        <div>
+          <p role={erro ? "alert" : "status"}>{erro || "Carregando..."}</p>
+          {erro && (
+            <div className="mt-4 flex gap-4">
+              <button
+                onClick={() => {
+                  setErro("");
+                  carregar();
+                }}
+              >
+                Tentar novamente
+              </button>
+              <button onClick={() => router.push("/dashboard")}>
+                Voltar aos estudos
+              </button>
+            </div>
+          )}
+        </div>
       </main>
     );
   }
@@ -219,6 +336,28 @@ export default function TemaPage() {
 
   return (
     <AppShell largura="total">
+      <PlanejamentoEditor
+        prazo={roteiro.prazo}
+        planejamento={roteiro.planejamento}
+        salvar={async (patch) => {
+          await gravar(patch);
+          roteiroRef.current = { ...roteiroRef.current, ...patch };
+          setRoteiro(roteiroRef.current);
+        }}
+      />
+      <p role={erro ? "alert" : "status"} className="mb-2 text-sm">
+        {erro || (salvando ? "Salvando…" : "")}
+        {erro && (
+          <button
+            onClick={() =>
+              salvarTopicos(roteiroRef.current.topicos).catch(() => {})
+            }
+          >
+            Tentar salvar novamente
+          </button>
+        )}
+      </p>
+
       <button
         onClick={() => router.push("/dashboard")}
         className="mb-4 text-sm text-blue-600 hover:underline dark:text-blue-400"
@@ -373,7 +512,7 @@ export default function TemaPage() {
         <div className="space-y-3 lg:col-span-2 lg:order-1">
           {roteiro.topicos.map((t: Topico, i: number) => (
             <div
-              key={i}
+              key={t.id}
               className={`rounded-xl bg-white shadow transition dark:border dark:bg-slate-900 ${
                 aberto === i
                   ? "ring-2 ring-blue-500 dark:border-blue-500"
@@ -383,11 +522,22 @@ export default function TemaPage() {
               <div className="flex items-start gap-3 p-4">
                 <input
                   type="checkbox"
+                  aria-label={`Concluir ${t.titulo}`}
                   checked={concluidos[i]}
                   onChange={() => alternar(i)}
                   className="mt-1 h-5 w-5 cursor-pointer accent-green-500"
                 />
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Abrir ${t.titulo}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpandido(false);
+                      setAberto(i);
+                    }
+                  }}
                   className="flex-1 cursor-pointer"
                   onClick={() => {
                     setExpandido(false);
@@ -437,7 +587,7 @@ export default function TemaPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      mover(i, i - 1);
+                      mover(i, i - 1).catch(() => {});
                     }}
                     disabled={i === 0}
                     title="Mover para cima"
@@ -449,7 +599,7 @@ export default function TemaPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      mover(i, i + 1);
+                      mover(i, i + 1).catch(() => {});
                     }}
                     disabled={i === roteiro.topicos.length - 1}
                     title="Mover para baixo"
@@ -464,25 +614,22 @@ export default function TemaPage() {
         </div>
       </div>
 
-      {(!expandido || aberto === null) && (
-        <TopicoDrawer
-          aberto={aberto !== null}
-          onFechar={() => {
-            setExpandido(false);
-            setAberto(null);
-          }}
-          onExpandir={() => setExpandido(true)}
-          topico={aberto !== null ? roteiro.topicos[aberto] : null}
-          indice={aberto ?? 0}
-          roteiroId={id}
+      {!expandido && aberto !== null && (
+        <SalaEstudo
+          roteiro={roteiro}
+          indice={aberto}
+          onSelecionar={setAberto}
+          onFechar={() => setAberto(null)}
+          onAvancado={() => setExpandido(true)}
           onSalvarTopico={salvarTopico}
+          erro={erro}
+          salvando={salvando}
         />
       )}
-
       {expandido && aberto !== null && (
         <WorkspaceBlocos
           topico={roteiro.topicos[aberto]}
-          indice={aberto}
+          indice={roteiro.topicos[aberto].recursoIndex}
           roteiroId={id}
           onFechar={() => setExpandido(false)}
           onSalvarTopico={salvarTopico}

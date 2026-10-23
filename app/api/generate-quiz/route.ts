@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarQuiz } from "@/lib/gemini";
-
+import { authorize, body, text, failure, ApiError } from "@/lib/api-server";
 export async function POST(req: NextRequest) {
   try {
-    const { titulo, descricao } = await req.json();
-    if (!titulo) {
-      return NextResponse.json({ erro: "Informe o título do tópico" }, { status: 400 });
-    }
-    const perguntas = await gerarQuiz(titulo, descricao ?? "");
-    return NextResponse.json({ perguntas });
-  } catch (err: any) {
-    return NextResponse.json({ erro: err.message ?? "Erro ao gerar quiz" }, { status: 500 });
+    await authorize(req, true);
+    const d = await body(req);
+    const value = await gerarQuiz(
+      text(d.titulo, "Título"),
+      text(d.descricao, "Descrição", 4000, true),
+    );
+    return NextResponse.json({ perguntas: value });
+  } catch (error) {
+    return failure(error);
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "./Icon";
 import { useEffect, useState } from "react";
 
 /** Botão para alternar entre claro/escuro/sistema. Preferência salva no navegador. */
@@ -57,17 +58,21 @@ export default function ThemeToggle() {
       : tema === "dark"
         ? "Modo escuro"
         : "Modo claro";
-  const icone =
-    tema === "system" ? (isDark ? "🌙" : "☀️") : tema === "dark" ? "🌙" : "☀️";
-
   return (
     <button
       onClick={alternar}
       title={rotulo}
       aria-label="Alternar tema"
-      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-base leading-none hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+      className="theme-toggle"
     >
-      {icone} <span className="ml-1 hidden sm:inline text-xs">{tema}</span>
+      <Icon name={isDark ? "moon" : "sun"} size={17} />
+      <span>
+        {tema === "system"
+          ? "Automático"
+          : tema === "dark"
+            ? "Escuro"
+            : "Claro"}
+      </span>
     </button>
   );
 }
