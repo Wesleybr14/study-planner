@@ -105,7 +105,9 @@ type EpmcResultado = {
   journalTitle?: string;
   journalInfo?: { journal?: { title?: string } };
   isOpenAccess?: string;
-  fullTextUrlList?: { fullTextUrl?: { url?: string; documentStyle?: string }[] };
+  fullTextUrlList?: {
+    fullTextUrl?: { url?: string; documentStyle?: string }[];
+  };
 };
 
 async function buscarEpmc(consulta: string, max: number): Promise<Artigo[]> {

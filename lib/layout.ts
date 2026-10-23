@@ -324,13 +324,11 @@ export async function salvarArranjos(arranjos: Arranjos): Promise<void> {
     throw new Error(
       "Sessão expirada. Entre novamente para sincronizar o layout.",
     );
-  const { error } = await supabase
-    .from("preferencias")
-    .upsert({
-      user_id: uid,
-      layout: arranjos,
-      atualizado_em: new Date().toISOString(),
-    });
+  const { error } = await supabase.from("preferencias").upsert({
+    user_id: uid,
+    layout: arranjos,
+    atualizado_em: new Date().toISOString(),
+  });
   if (error) throw new Error(error.message);
   const local = lerArranjosLocal(uid);
   if (!local || JSON.stringify(local.arranjos) === JSON.stringify(arranjos)) {

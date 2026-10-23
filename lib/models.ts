@@ -6,7 +6,11 @@ export type Pergunta = {
 };
 export type Tentativa = { data: string; acertos: number; total: number };
 // Além de frente/verso, o card guarda o estado da revisão espaçada (lib/revisao.ts).
-export type Flashcard = { frente: string; verso: string; [key: string]: unknown };
+export type Flashcard = {
+  frente: string;
+  verso: string;
+  [key: string]: unknown;
+};
 export type Topico = {
   id: string;
   recursoIndex: number;

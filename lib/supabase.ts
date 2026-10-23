@@ -10,7 +10,7 @@ function getClient(): SupabaseClient {
 
   if (!url || !url.startsWith("http") || !anonKey) {
     throw new Error(
-      "Supabase não configurado. Preencha NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local"
+      "Supabase não configurado. Preencha NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local",
     );
   }
 

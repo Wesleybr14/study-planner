@@ -166,12 +166,8 @@ export default function QuizBloco({
           {corrigido && (
             <span className="text-xs text-slate-500 dark:text-slate-400">
               Acertos:{" "}
-              {
-                quizzes.filter(
-                  (q, qi) => respostas[qi] === q.correta,
-                ).length
-              }
-              /{quizzes.length}
+              {quizzes.filter((q, qi) => respostas[qi] === q.correta).length}/
+              {quizzes.length}
             </span>
           )}
         </div>

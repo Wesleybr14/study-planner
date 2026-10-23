@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarRoteiro } from "@/lib/gemini";
-import { authorize, consumirCota, body, text, failure, ApiError } from "@/lib/api-server";
+import {
+  authorize,
+  consumirCota,
+  body,
+  text,
+  failure,
+  ApiError,
+} from "@/lib/api-server";
 export async function POST(req: NextRequest) {
   try {
     const db = await authorize(req);

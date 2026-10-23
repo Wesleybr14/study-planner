@@ -10,7 +10,12 @@ export type EstadoRevisao = {
 
 export type Qualidade = "dificil" | "bom" | "facil";
 
-export const ESTADO_INICIAL: EstadoRevisao = { ease: 2.5, intervalo: 0, reps: 0, proxima: null };
+export const ESTADO_INICIAL: EstadoRevisao = {
+  ease: 2.5,
+  intervalo: 0,
+  reps: 0,
+  proxima: null,
+};
 
 const NOTA: Record<Qualidade, number> = { dificil: 2, bom: 4, facil: 5 };
 
@@ -31,7 +36,10 @@ export function estaVencido(estado?: EstadoRevisao | null): boolean {
 }
 
 /** Aplica o SM-2 e devolve o novo estado do card. */
-export function revisar(estado: EstadoRevisao, qualidade: Qualidade): EstadoRevisao {
+export function revisar(
+  estado: EstadoRevisao,
+  qualidade: Qualidade,
+): EstadoRevisao {
   const q = NOTA[qualidade];
   let { ease, intervalo, reps } = estado;
 
@@ -52,7 +60,12 @@ export function revisar(estado: EstadoRevisao, qualidade: Qualidade): EstadoRevi
   proxima.setHours(0, 0, 0, 0);
   proxima.setDate(proxima.getDate() + intervalo);
 
-  return { ease: +ease.toFixed(2), intervalo, reps, proxima: isoLocal(proxima) };
+  return {
+    ease: +ease.toFixed(2),
+    intervalo,
+    reps,
+    proxima: isoLocal(proxima),
+  };
 }
 
 /** Texto amigável do intervalo agendado. */

@@ -352,7 +352,10 @@ test("API: pedido inválido não consome cota; válido consome a categoria certa
 test("arquivos: MIME do upload sai do nome quando o navegador não informa", () => {
   const { mimeDe } = require("../lib/arquivos.ts");
   assert.equal(mimeDe("livro.EPUB", ""), "application/epub+zip");
-  assert.equal(mimeDe("artigo.pdf", "application/octet-stream"), "application/pdf");
+  assert.equal(
+    mimeDe("artigo.pdf", "application/octet-stream"),
+    "application/pdf",
+  );
   assert.equal(mimeDe("nota.txt", "text/plain"), "text/plain");
 });
 test("http: buscas externas têm timeout e cache", async () => {

@@ -216,11 +216,9 @@ export async function restaurarBackup(value: unknown, substituir: boolean) {
       else {
         const id = crypto.randomUUID();
         const path = `${auth.user.id}/${roteiro_id}/${id}`;
-        const up = await supabase.storage
-          .from("arquivos")
-          .upload(path, blob, {
-            contentType: mimeDe(a.nome, a.mime) || undefined,
-          });
+        const up = await supabase.storage.from("arquivos").upload(path, blob, {
+          contentType: mimeDe(a.nome, a.mime) || undefined,
+        });
         if (up.error) throw up.error;
         enviados.push(path);
         arquivos.push({
