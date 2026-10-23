@@ -288,3 +288,84 @@ test("organização preserva blocos ocultos e usa largura total para último blo
   assert.equal(result[3].x, 0);
   assert.ok(result[3].y >= result[0].h);
 });
+
+// Supabase falso: aceita o token "valido" e registra as chamadas de cota.
+function supabaseFalso() {
+  const cotas = [];
+  const fetchOriginal = global.fetch;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "http://supabase.teste";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
+  global.fetch = async (input, init = {}) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/auth/v1/user"))
+      return Response.json({ id: "u1", aud: "authenticated" });
+    if (url.endsWith("/rest/v1/rpc/consumir_cota")) {
+      cotas.push(JSON.parse(init.body).categoria);
+      return Response.json(true);
+    }
+    throw new Error(`fetch inesperado: ${url}`);
+  };
+  return { cotas, restaurar: () => (global.fetch = fetchOriginal) };
+}
+const pedido = (url, init = {}) =>
+  new (require("next/server").NextRequest)(url, {
+    ...init,
+    headers: { Authorization: "Bearer valido", ...init.headers },
+  });
+test("API: pedido inválido não consome cota; válido consome a categoria certa", async () => {
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.YOUTUBE_API_KEY;
+  const sb = supabaseFalso();
+  try {
+    const quiz = require("../app/api/generate-quiz/route.ts");
+    const invalido = await quiz.POST(
+      pedido("http://localhost/api/generate-quiz", {
+        method: "POST",
+        body: "{}",
+      }),
+    );
+    assert.equal(invalido.status, 400);
+    assert.deepEqual(sb.cotas, []);
+    // Válido: consome "ia" (e falha depois só porque não há chave do Gemini).
+    const valido = await quiz.POST(
+      pedido("http://localhost/api/generate-quiz", {
+        method: "POST",
+        body: JSON.stringify({ titulo: "Frações" }),
+      }),
+    );
+    assert.equal(valido.status, 502);
+    assert.deepEqual(sb.cotas, ["ia"]);
+    const videos = require("../app/api/search-videos/route.ts");
+    assert.equal(
+      (await videos.GET(pedido("http://localhost/api/search-videos"))).status,
+      400,
+    );
+    const ok = await videos.GET(
+      pedido("http://localhost/api/search-videos?q=fra%C3%A7%C3%B5es"),
+    );
+    assert.equal(ok.status, 200);
+    assert.deepEqual(sb.cotas, ["ia", "video"]);
+  } finally {
+    sb.restaurar();
+  }
+});
+test("arquivos: MIME do upload sai do nome quando o navegador não informa", () => {
+  const { mimeDe } = require("../lib/arquivos.ts");
+  assert.equal(mimeDe("livro.EPUB", ""), "application/epub+zip");
+  assert.equal(mimeDe("artigo.pdf", "application/octet-stream"), "application/pdf");
+  assert.equal(mimeDe("nota.txt", "text/plain"), "text/plain");
+});
+test("http: buscas externas têm timeout e cache", async () => {
+  const { buscarExterno } = require("../lib/http.ts");
+  const fetchOriginal = global.fetch;
+  let opcoes;
+  global.fetch = async (_url, init) => ((opcoes = init), new Response("{}"));
+  try {
+    await buscarExterno("https://exemplo.test", { headers: { a: "1" } });
+  } finally {
+    global.fetch = fetchOriginal;
+  }
+  assert.ok(opcoes.signal instanceof AbortSignal);
+  assert.equal(opcoes.next.revalidate, 86400);
+  assert.deepEqual(opcoes.headers, { a: "1" });
+});
