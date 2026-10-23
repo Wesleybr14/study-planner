@@ -146,7 +146,21 @@ async function buscarOpenLibrary(
 
 // ---------- Google Books ----------
 
-type GBItem = { id?: string; volumeInfo?: any; accessInfo?: any };
+type GBItem = {
+  id?: string;
+  volumeInfo?: {
+    title?: string;
+    authors?: string[];
+    infoLink?: string;
+    imageLinks?: { thumbnail?: string };
+  };
+  accessInfo?: {
+    viewability?: string;
+    webReaderLink?: string;
+    pdf?: { isAvailable?: boolean; downloadLink?: string };
+    epub?: { isAvailable?: boolean };
+  };
+};
 
 async function buscarGoogle(
   consulta: string,

@@ -1,5 +1,8 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
+import type { Artigo } from "@/lib/artigos";
+import type { Topico } from "@/lib/models";
+import { mensagemDe } from "@/lib/erro";
 
 import { useEffect, useState } from "react";
 import SeletorArquivos, {
@@ -19,7 +22,7 @@ const NOME_FONTE: Record<string, string> = {
 
 type Opcao =
   | { tipo: "arquivo"; k: string; a: Arquivo }
-  | { tipo: "web"; k: string; a2: any };
+  | { tipo: "web"; k: string; a2: Artigo };
 
 /** Bloco de artigos científicos gratuitos (arXiv, Europe PMC, DOAJ). */
 export default function ArtigosBloco({
@@ -28,12 +31,12 @@ export default function ArtigosBloco({
   indice,
   compacto = false,
 }: {
-  topico: any;
+  topico: Topico;
   roteiroId: string;
   indice: number;
   compacto?: boolean;
 }) {
-  const [artigos, setArtigos] = useState<any[]>([]);
+  const [artigos, setArtigos] = useState<Artigo[]>([]);
   const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [aberto, setAberto] = useState<number | null>(null);
@@ -78,7 +81,7 @@ export default function ArtigosBloco({
     };
   }, [topico?.buscaArtigos, topico?.buscaLivros, topico?.titulo, memoria]);
 
-  const metaArtigo = (a: any) => (
+  const metaArtigo = (a: Artigo) => (
     <p className="text-xs text-slate-500 dark:text-slate-400">
       {a.autores}
       {a.ano ? ` · ${a.ano}` : ""}
@@ -86,7 +89,7 @@ export default function ArtigosBloco({
     </p>
   );
 
-  const linksArtigo = (a: any) => (
+  const linksArtigo = (a: Artigo) => (
     <div className="flex flex-wrap items-center gap-2">
       {a.pdf && (
         <a
@@ -194,8 +197,8 @@ export default function ArtigosBloco({
                   setAviso("");
                   try {
                     await arq.subir(f);
-                  } catch (e: any) {
-                    setAviso(e?.message ?? "Falha ao salvar na nuvem.");
+                  } catch (e) {
+                    setAviso(mensagemDe(e, "Falha ao salvar na nuvem."));
                   }
                 }}
                 title="Salvar na nuvem"
@@ -210,8 +213,8 @@ export default function ArtigosBloco({
                 setAviso("");
                 arq
                   .baixar(f)
-                  .catch((e: any) =>
-                    setAviso(e?.message ?? "Não foi possível baixar."),
+                  .catch((e) =>
+                    setAviso(mensagemDe(e, "Não foi possível baixar.")),
                   );
               }}
               title="Salvar uma cópia no computador"
@@ -283,7 +286,7 @@ export default function ArtigosBloco({
           </p>
         )}
 
-        {artigos.map((a: any, k: number) => (
+        {artigos.map((a, k) => (
           <div
             key={k}
             className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"

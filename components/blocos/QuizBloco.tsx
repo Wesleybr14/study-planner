@@ -1,5 +1,7 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
+import type { Pergunta, Topico } from "@/lib/models";
+import { mensagemDe } from "@/lib/erro";
 
 import { useState } from "react";
 
@@ -8,12 +10,12 @@ export default function QuizBloco({
   topico,
   onSalvarTopico,
 }: {
-  topico: any;
-  onSalvarTopico: (patch: Record<string, any>) => void | Promise<void>;
+  topico: Topico;
+  onSalvarTopico: (patch: Partial<Topico>) => void | Promise<void>;
 }) {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [quizzes, setQuizzes] = useState<any[]>(topico.quiz ?? []);
+  const [quizzes, setQuizzes] = useState<Pergunta[]>(topico.quiz ?? []);
   const [gerando, setGerando] = useState(false);
   const [respostas, setRespostas] = useState<Record<number, number>>({});
   const [corrigido, setCorrigido] = useState(false);
@@ -35,8 +37,8 @@ export default function QuizBloco({
       if (!res.ok) throw new Error(data.erro ?? "Erro ao gerar quiz");
       await onSalvarTopico({ quiz: data.perguntas });
       setQuizzes(data.perguntas);
-    } catch (e: any) {
-      setErro(e.message);
+    } catch (e) {
+      setErro(mensagemDe(e));
     } finally {
       setGerando(false);
     }
@@ -67,9 +69,9 @@ export default function QuizBloco({
       {(topico.tentativas ?? []).length > 0 && (
         <p className="mb-2 text-xs">
           Histórico:{" "}
-          {topico.tentativas
+          {(topico.tentativas ?? [])
             .map(
-              (t: any) =>
+              (t) =>
                 `${new Date(t.data).toLocaleDateString("pt-BR")}: ${t.acertos}/${t.total}`,
             )
             .join(" · ")}
@@ -92,7 +94,7 @@ export default function QuizBloco({
         </p>
       )}
 
-      {quizzes.map((q: any, qi: number) => {
+      {quizzes.map((q, qi) => {
         const resp = respostas[qi];
         const acertou = corrigido && resp === q.correta;
         return (
@@ -166,7 +168,7 @@ export default function QuizBloco({
               Acertos:{" "}
               {
                 quizzes.filter(
-                  (q: any, qi: number) => respostas[qi] === q.correta,
+                  (q, qi) => respostas[qi] === q.correta,
                 ).length
               }
               /{quizzes.length}

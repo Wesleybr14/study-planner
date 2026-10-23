@@ -32,6 +32,7 @@ import NotasBloco from "./blocos/NotasBloco";
 import FlashcardsBloco from "./blocos/FlashcardsBloco";
 import QuizBloco from "./blocos/QuizBloco";
 import ThemeToggle from "./ThemeToggle";
+import type { Topico } from "@/lib/models";
 const ICONES: Record<TipoBloco, IconName> = {
   video: "arrow",
   livro: "book",
@@ -60,11 +61,11 @@ export default function WorkspaceBlocos({
   onFechar,
   onSalvarTopico,
 }: {
-  topico: any;
+  topico: Topico;
   indice: number;
   roteiroId: string;
   onFechar: () => void;
-  onSalvarTopico: (patch: Record<string, any>) => void | Promise<void>;
+  onSalvarTopico: (patch: Partial<Topico>) => void | Promise<void>;
 }) {
   const dialogRef = useDialog<HTMLDivElement>(true);
   const chave = topicKey(roteiroId, indice);

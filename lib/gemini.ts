@@ -23,7 +23,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function chamarGemini(prompt: string): Promise<any> {
+async function chamarGemini(prompt: string): Promise<unknown> {
   if (!GEMINI_KEY)
     throw new Error("GEMINI_API_KEY não configurada no .env.local");
 
@@ -55,8 +55,8 @@ async function chamarGemini(prompt: string): Promise<any> {
             Math.max(1, Math.min(15000, 45000 - (Date.now() - inicio))),
           ),
         });
-      } catch (e: any) {
-        ultimoErro = `Falha de conexão: ${e.message}`;
+      } catch (e) {
+        ultimoErro = `Falha de conexão: ${e instanceof Error ? e.message : e}`;
         await sleep(tentativa * 1500);
         continue;
       }
@@ -146,11 +146,11 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 
 A lista "buscas" deve ter exatamente ${titulos.length} itens, na mesma ordem dos tópicos.`;
 
-  const resultado = await chamarGemini(prompt);
+  const { buscas } = (await chamarGemini(prompt)) as { buscas?: unknown };
   if (
-    !Array.isArray(resultado?.buscas) ||
-    resultado.buscas.length !== titulos.length ||
-    resultado.buscas.some(
+    !Array.isArray(buscas) ||
+    buscas.length !== titulos.length ||
+    buscas.some(
       (b: Record<string, unknown>) =>
         !b ||
         ["buscaVideos", "buscaLivros", "buscaArtigos"].some(
@@ -159,7 +159,11 @@ A lista "buscas" deve ter exatamente ${titulos.length} itens, na mesma ordem dos
     )
   )
     throw new Error("Buscas inválidas.");
-  return resultado.buscas;
+  return buscas as {
+    buscaVideos: string;
+    buscaLivros: string;
+    buscaArtigos: string;
+  }[];
 }
 
 export async function gerarFlashcards(titulo: string, descricao: string) {
@@ -175,7 +179,7 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
   ]
 }`;
 
-  const resultado = await chamarGemini(prompt);
+  const resultado = (await chamarGemini(prompt)) as { flashcards?: unknown };
   return validarCards(resultado?.flashcards);
 }
 
@@ -199,6 +203,6 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 
 O campo "correta" é o índice (0 a 3) da alternativa certa.`;
 
-  const resultado = await chamarGemini(prompt);
+  const resultado = (await chamarGemini(prompt)) as { perguntas?: unknown };
   return validarQuiz(resultado?.perguntas);
 }

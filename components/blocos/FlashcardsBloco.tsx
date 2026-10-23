@@ -1,5 +1,7 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
+import type { Topico } from "@/lib/models";
+import { mensagemDe } from "@/lib/erro";
 
 import { useState } from "react";
 
@@ -8,12 +10,12 @@ export default function FlashcardsBloco({
   topico,
   onSalvarTopico,
 }: {
-  topico: any;
-  onSalvarTopico: (patch: Record<string, any>) => void;
+  topico: Topico;
+  onSalvarTopico: (patch: Partial<Topico>) => void;
 }) {
   const [gerando, setGerando] = useState(false);
   const [virados, setVirados] = useState<Record<number, boolean>>({});
-  const flashcards: any[] = topico?.flashcards ?? [];
+  const flashcards = topico?.flashcards ?? [];
 
   async function gerar() {
     setGerando(true);
@@ -30,8 +32,8 @@ export default function FlashcardsBloco({
       if (!res.ok) throw new Error(data.erro ?? "Erro ao gerar");
       setVirados({});
       await onSalvarTopico({ flashcards: data.flashcards });
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(mensagemDe(e));
     } finally {
       setGerando(false);
     }
@@ -41,7 +43,7 @@ export default function FlashcardsBloco({
     if (!flashcards.length) return;
     const linhas = [
       "Frente,Verso",
-      ...flashcards.map((f: any) => {
+      ...flashcards.map((f) => {
         const frente = String(f?.frente || "").replace(/"/g, '""');
         const verso = String(f?.verso || "").replace(/"/g, '""');
         return `"${frente}","${verso}"`;
@@ -99,7 +101,7 @@ export default function FlashcardsBloco({
             Nenhum flashcard ainda. Clique em “Gerar flashcards”.
           </p>
         )}
-        {flashcards.map((f: any, k: number) => (
+        {flashcards.map((f, k) => (
           <button
             key={k}
             onClick={() => setVirados((p) => ({ ...p, [k]: !p[k] }))}

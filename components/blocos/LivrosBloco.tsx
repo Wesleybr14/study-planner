@@ -1,5 +1,8 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
+import type { Livro } from "@/lib/books";
+import type { Topico } from "@/lib/models";
+import { mensagemDe } from "@/lib/erro";
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -28,7 +31,7 @@ function estiloAcesso(acesso: string): string {
 }
 
 /** Endereço de leitura embutida de um livro, quando existir. */
-function embedLivro(l: any): string | null {
+function embedLivro(l: Livro): string | null {
   if (l.ia) return `https://archive.org/embed/${l.ia}`;
   if (l.fonte === "google" && l.googleId)
     return `https://books.google.com/books?id=${l.googleId}&output=embed`;
@@ -37,7 +40,7 @@ function embedLivro(l: any): string | null {
 
 type Opcao =
   | { tipo: "arquivo"; k: string; a: Arquivo }
-  | { tipo: "web"; k: string; l: any };
+  | { tipo: "web"; k: string; l: Livro };
 
 /** Bloco de livros: busca Open Library/Google Books e permite ler embutido. */
 export default function LivrosBloco({
@@ -46,12 +49,12 @@ export default function LivrosBloco({
   indice,
   compacto = false,
 }: {
-  topico: any;
+  topico: Topico;
   roteiroId: string;
   indice: number;
   compacto?: boolean;
 }) {
-  const [livros, setLivros] = useState<any[]>([]);
+  const [livros, setLivros] = useState<Livro[]>([]);
   const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [soGratis, setSoGratis] = useState(false);
@@ -98,7 +101,7 @@ export default function LivrosBloco({
     };
   }, [topico?.buscaLivros, topico?.titulo, soGratis, memoria]);
 
-  const capa = (l: any) =>
+  const capa = (l: Livro) =>
     l.capa ? (
       <Image
         unoptimized
@@ -118,7 +121,7 @@ export default function LivrosBloco({
       </div>
     );
 
-  const links = (l: any) => (
+  const links = (l: Livro) => (
     <div className="mt-1 flex flex-wrap items-center gap-2">
       <span className={estiloAcesso(l.acesso)}>
         {ROTULO_ACESSO[l.acesso] ?? ""}
@@ -235,8 +238,8 @@ export default function LivrosBloco({
                   setAviso("");
                   try {
                     await arq.subir(a);
-                  } catch (e: any) {
-                    setAviso(e?.message ?? "Falha ao salvar na nuvem.");
+                  } catch (e) {
+                    setAviso(mensagemDe(e, "Falha ao salvar na nuvem."));
                   }
                 }}
                 title="Salvar na nuvem"
@@ -251,8 +254,8 @@ export default function LivrosBloco({
                 setAviso("");
                 arq
                   .baixar(a)
-                  .catch((e: any) =>
-                    setAviso(e?.message ?? "Não foi possível baixar."),
+                  .catch((e) =>
+                    setAviso(mensagemDe(e, "Não foi possível baixar.")),
                   );
               }}
               title="Salvar uma cópia no computador"
@@ -324,7 +327,7 @@ export default function LivrosBloco({
           </p>
         )}
 
-        {livros.map((l: any, k: number) => {
+        {livros.map((l, k) => {
           const embed = embedLivro(l);
           return (
             <div
@@ -368,7 +371,7 @@ export default function LivrosBloco({
 }
 
 /** Leitura de um livro da busca (embed quando disponível, senão capa/links). */
-function LeituraWeb({ livro: l }: { livro: any }) {
+function LeituraWeb({ livro: l }: { livro: Livro }) {
   const embed = embedLivro(l);
   return (
     <>

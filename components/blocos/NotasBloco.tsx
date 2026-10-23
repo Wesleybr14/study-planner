@@ -10,6 +10,7 @@ import {
   type BlocoNota,
   type Token,
 } from "@/lib/notas";
+import type { Topico } from "@/lib/models";
 
 /** Renderiza a formatação em linha (negrito, itálico, riscado, grifar, link). */
 function tokensJSX(tokens: Token[], base: string): ReactNode[] {
@@ -155,10 +156,10 @@ export default function NotasBloco({
   mostrarCronometro = true,
 }: {
   mostrarCronometro?: boolean;
-  topico: any;
+  topico: Topico;
   indice: number;
   roteiroId: string;
-  onSalvarTopico: (patch: Record<string, any>) => void;
+  onSalvarTopico: (patch: Partial<Topico>) => void;
 }) {
   const chave = `rascunho:${roteiroId}:${topico.id ?? indice}`;
   const [nota, setNota] = useState<string>(topico?.nota ?? "");

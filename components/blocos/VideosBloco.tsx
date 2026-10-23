@@ -1,5 +1,7 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
+import type { Video } from "@/lib/youtube";
+import type { Topico } from "@/lib/models";
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -10,11 +12,11 @@ export default function VideosBloco({
   compacto = false,
   memoria,
 }: {
-  topico: any;
+  topico: Topico;
   compacto?: boolean;
   memoria?: string;
 }) {
-  const [videos, setVideos] = useState<any[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [erroBusca, setErroBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [sel, setSel] = useState<number | null>(null);
@@ -29,12 +31,12 @@ export default function VideosBloco({
       .then((r) => r.json())
       .then((d) => {
         if (!vivo) return;
-        const lista = Array.isArray(d) ? d : [];
+        const lista: Video[] = Array.isArray(d) ? d : [];
         setVideos(lista);
         if (memoria)
           try {
             const salvo = localStorage.getItem(memoria);
-            const pos = lista.findIndex((v: any) => v.videoId === salvo);
+            const pos = lista.findIndex((v) => v.videoId === salvo);
             if (pos >= 0) setSel(pos);
           } catch {}
       })
@@ -86,7 +88,7 @@ export default function VideosBloco({
               title="Trocar de vídeo"
               className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
-              {videos.map((vv: any, k: number) => (
+              {videos.map((vv, k) => (
                 <option key={k} value={k}>
                   {vv.titulo}
                 </option>
@@ -128,7 +130,7 @@ export default function VideosBloco({
 
   return (
     <div className="space-y-2">
-      {videos.map((v: any, k: number) =>
+      {videos.map((v, k) =>
         v.videoId ? (
           <div
             key={k}

@@ -94,6 +94,20 @@ async function buscarArxiv(consulta: string, max: number): Promise<Artigo[]> {
 
 // ---------- Europe PMC ----------
 
+type EpmcResultado = {
+  id?: string;
+  source?: string;
+  doi?: string;
+  title?: string;
+  authorString?: string;
+  pubYear?: string | number;
+  abstractText?: string;
+  journalTitle?: string;
+  journalInfo?: { journal?: { title?: string } };
+  isOpenAccess?: string;
+  fullTextUrlList?: { fullTextUrl?: { url?: string; documentStyle?: string }[] };
+};
+
 async function buscarEpmc(consulta: string, max: number): Promise<Artigo[]> {
   const url = new URL(
     "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
@@ -107,10 +121,10 @@ async function buscarEpmc(consulta: string, max: number): Promise<Artigo[]> {
   if (!res.ok) throw new Error(`epmc ${res.status}`);
   const data = await res.json();
 
-  return (data?.resultList?.result ?? [])
-    .filter((r: any) => r.isOpenAccess === "Y")
-    .map((r: any): Artigo => {
-      const urls: any[] = r.fullTextUrlList?.fullTextUrl ?? [];
+  return ((data?.resultList?.result ?? []) as EpmcResultado[])
+    .filter((r) => r.isOpenAccess === "Y")
+    .map((r): Artigo => {
+      const urls = r.fullTextUrlList?.fullTextUrl ?? [];
       const pdf = urls.find((u) => u.documentStyle === "pdf" && u.url)?.url;
       const pagina = r.doi
         ? `https://doi.org/${r.doi}`
@@ -132,6 +146,18 @@ async function buscarEpmc(consulta: string, max: number): Promise<Artigo[]> {
 
 // ---------- DOAJ ----------
 
+type DoajItem = {
+  bibjson?: {
+    title?: string;
+    year?: string | number;
+    abstract?: string;
+    journal?: { title?: string };
+    author?: { name?: string }[];
+    link?: { type?: string; url?: string }[];
+    identifier?: { type?: string; id?: string }[];
+  };
+};
+
 async function buscarDoaj(consulta: string, max: number): Promise<Artigo[]> {
   const url = `https://doaj.org/api/search/articles/${encodeURIComponent(
     consulta,
@@ -141,21 +167,21 @@ async function buscarDoaj(consulta: string, max: number): Promise<Artigo[]> {
   if (!res.ok) throw new Error(`doaj ${res.status}`);
   const data = await res.json();
 
-  return (data.results ?? []).map((item: any): Artigo => {
+  return ((data.results ?? []) as DoajItem[]).map((item): Artigo => {
     const b = item.bibjson ?? {};
-    const links: any[] = b.link ?? [];
+    const links = b.link ?? [];
     const pdf = links.find(
       (l) => /pdf/i.test(l.type ?? "") || /\.pdf($|\?)/i.test(l.url ?? ""),
     )?.url;
     const pagina =
       links.find((l) => l.type === "fulltext")?.url ?? links[0]?.url ?? "";
-    const doi = (b.identifier ?? []).find((i: any) => i.type === "doi")?.id;
+    const doi = (b.identifier ?? []).find((i) => i.type === "doi")?.id;
 
     return {
       titulo: limpar(b.title) ?? "Sem título",
       autores:
         (b.author ?? [])
-          .map((a: any) => a?.name)
+          .map((a) => a?.name)
           .filter(Boolean)
           .slice(0, 3)
           .join(", ") || "Desconhecido",

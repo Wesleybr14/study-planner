@@ -9,6 +9,7 @@ import ArquivosBloco from "@/components/blocos/ArquivosBloco";
 import NotasBloco from "@/components/blocos/NotasBloco";
 import FlashcardsBloco from "@/components/blocos/FlashcardsBloco";
 import QuizBloco from "@/components/blocos/QuizBloco";
+import type { Topico } from "@/lib/models";
 
 type Aba =
   | "videos"
@@ -43,12 +44,12 @@ export default function TopicoDrawer({
   onSalvarTopico,
   onExpandir,
 }: {
-  topico: any | null;
+  topico: Topico | null;
   indice: number;
   roteiroId: string;
   aberto: boolean;
   onFechar: () => void;
-  onSalvarTopico: (patch: Record<string, any>) => void;
+  onSalvarTopico: (patch: Partial<Topico>) => void;
   onExpandir: () => void;
 }) {
   const painelRef = useDialog<HTMLElement>(aberto);
@@ -82,7 +83,7 @@ export default function TopicoDrawer({
       titulo: `${topico.titulo} (cópia)`,
       nota: topico.nota ?? "",
       flashcards: Array.isArray(topico.flashcards)
-        ? topico.flashcards.map((f: any) => ({ ...f }))
+        ? topico.flashcards.map((f) => ({ ...f }))
         : [],
       videosEscolhidos: Array.isArray(topico.videosEscolhidos)
         ? [...topico.videosEscolhidos]

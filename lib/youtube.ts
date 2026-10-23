@@ -2,7 +2,27 @@ import { buscarExterno } from "./http";
 
 const YOUTUBE_KEY = process.env.YOUTUBE_API_KEY;
 
-export async function buscarVideos(consulta: string, max = 3) {
+export type Video = {
+  titulo: string;
+  canal: string;
+  thumbnail?: string;
+  url: string;
+  videoId: string;
+};
+
+type ItemBusca = {
+  id: { videoId: string };
+  snippet: {
+    title: string;
+    channelTitle: string;
+    thumbnails?: { medium?: { url: string } };
+  };
+};
+
+export async function buscarVideos(
+  consulta: string,
+  max = 3,
+): Promise<Video[]> {
   if (!YOUTUBE_KEY) return [];
 
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
@@ -16,7 +36,7 @@ export async function buscarVideos(consulta: string, max = 3) {
   if (!res.ok) return [];
 
   const data = await res.json();
-  return (data.items ?? []).map((item: any) => ({
+  return ((data.items ?? []) as ItemBusca[]).map((item) => ({
     titulo: item.snippet.title,
     canal: item.snippet.channelTitle,
     thumbnail: item.snippet.thumbnails?.medium?.url,

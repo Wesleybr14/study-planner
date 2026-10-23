@@ -10,6 +10,7 @@ import NotasBloco from "./blocos/NotasBloco";
 import FlashcardsBloco from "./blocos/FlashcardsBloco";
 import QuizBloco from "./blocos/QuizBloco";
 import Cronometro from "./Cronometro";
+import type { Topico } from "@/lib/models";
 const MATERIAIS = ["Vídeos", "Livros", "Artigos", "Meus arquivos"];
 const CADERNO = ["Notas", "Flashcards", "Quiz"];
 export default function SalaEstudo({
@@ -27,7 +28,7 @@ export default function SalaEstudo({
   onSelecionar: (i: number) => void;
   onFechar: () => void;
   onAvancado: () => void;
-  onSalvarTopico: (patch: Record<string, any>) => Promise<void>;
+  onSalvarTopico: (patch: Partial<Topico>) => Promise<void>;
   erro: string;
   salvando: boolean;
 }) {
@@ -215,9 +216,9 @@ function Paineis({
   roteiroId,
   onSalvarTopico,
 }: {
-  topico: any;
+  topico: Topico;
   roteiroId: string;
-  onSalvarTopico: (patch: Record<string, any>) => Promise<void>;
+  onSalvarTopico: (patch: Partial<Topico>) => Promise<void>;
 }) {
   const chave = `estudo-paineis:${roteiroId}:${topico.id}`;
   const [material, setMaterial] = useState(0),
