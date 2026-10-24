@@ -107,9 +107,14 @@ export default function QuizBloco({
             </p>
             <div className="space-y-1">
               {q.opcoes.map((op: string, oi: number) => {
+                // Uma única cor por estado: classes de borda concorrentes no mesmo
+                // elemento fazem a ordem do CSS decidir (e a seleção sumia).
                 let cor =
                   "border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800";
-                if (corrigido && oi === q.correta)
+                if (!corrigido && oi === resp)
+                  cor =
+                    "border-blue-500 bg-blue-50 font-medium dark:border-blue-500 dark:bg-blue-900/30";
+                else if (corrigido && oi === q.correta)
                   cor =
                     "border-green-400 bg-green-50 dark:bg-green-900/30 dark:border-green-700";
                 else if (corrigido && oi === resp && oi !== q.correta)
@@ -119,12 +124,9 @@ export default function QuizBloco({
                   <button
                     key={oi}
                     disabled={corrigido}
+                    aria-pressed={oi === resp}
                     onClick={() => setRespostas((p) => ({ ...p, [qi]: oi }))}
-                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-left ${cor} ${
-                      resp === oi && !corrigido
-                        ? "border-blue-500 dark:border-blue-500"
-                        : ""
-                    }`}
+                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-left ${cor}`}
                   >
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
                       {String.fromCharCode(65 + oi)}

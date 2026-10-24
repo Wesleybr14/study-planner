@@ -20,8 +20,16 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        {/* Injeta o tema antes da primeira pintura (evita "flash" branco). */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* Injeta o tema antes da primeira pintura (evita "flash" branco).
+            No cliente o tipo vira text/plain: o script já rodou no HTML do
+            servidor, e o React avisa quando renderiza um <script> executável. */}
+        <script
+          type={
+            typeof window === "undefined" ? "text/javascript" : "text/plain"
+          }
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
       </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
