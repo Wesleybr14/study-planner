@@ -1,5 +1,12 @@
 # Histórico de mudanças
 
+## Migrações pelo Supabase CLI
+
+Os arquivos `supabase-setup.sql` e `supabase-migration-2.sql` … `-8.sql` foram
+movidos para `supabase/migrations/` (mesma ordem, com prefixo de data) e passam a
+ser aplicados com `npm run db:push`. A migração 3 ficou repetível, para que a
+sequência completa rode num banco novo. As referências abaixo usam os nomes antigos.
+
 ## Migração 8 — limites e cota de vídeos
 
 Execute `supabase-migration-8.sql` depois da 7. Ela limita o bucket `arquivos` a

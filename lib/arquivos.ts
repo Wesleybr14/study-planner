@@ -4,7 +4,7 @@
 //  - LOCAL: guardado no navegador (IndexedDB). Não sai do PC, funciona offline,
 //    mas só existe naquele navegador/aparelho.
 //  - NUVEM: enviado para o Supabase Storage, disponível em qualquer aparelho
-//    onde o usuário esteja logado (requer rodar a supabase-migration-6.sql).
+//    onde o usuário esteja logado (requer a migração 20261001000006_arquivos.sql).
 
 import { supabase } from "@/lib/supabase";
 

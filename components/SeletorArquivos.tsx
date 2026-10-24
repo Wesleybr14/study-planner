@@ -126,7 +126,7 @@ export default function SeletorArquivos({
     } catch (e: any) {
       onAviso(
         e?.message ??
-          "Falha ao salvar na nuvem. Você rodou a supabase-migration-6.sql?",
+          "Falha ao salvar na nuvem. Confira se as migrações do banco foram aplicadas (npm run db:status).",
       );
     } finally {
       setOcupado(null);

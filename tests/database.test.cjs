@@ -15,16 +15,12 @@ test("migração: cotas (ia, busca e vídeo), bucket, isolamento de usuário e r
  create table storage.objects(id uuid, bucket_id text, name text);
  create function storage.foldername(text) returns text[] language sql immutable as $$ select string_to_array($1,'/') $$;
  insert into auth.users values('${uid}'),('${outro}');`);
-    for (const file of [
-      "supabase-setup.sql",
-      "supabase-migration-4.sql",
-      "supabase-migration-6.sql",
-      "supabase-migration-7.sql",
-      "supabase-migration-8.sql",
-    ])
-      await db.exec(
-        fs.readFileSync(path.resolve(__dirname, "..", file), "utf8"),
-      );
+    // Todas as migrações em ordem, como o `supabase db push` faz num banco novo.
+    const pasta = path.resolve(__dirname, "..", "supabase", "migrations");
+    const migracoes = fs.readdirSync(pasta).filter((f) => f.endsWith(".sql"));
+    assert.ok(migracoes.length >= 8);
+    for (const file of migracoes.sort())
+      await db.exec(fs.readFileSync(path.join(pasta, file), "utf8"));
     assert.deepEqual(
       (
         await db.query(

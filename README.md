@@ -65,19 +65,24 @@ O `.env.example` também descreve as variáveis opcionais.
 
 ### 2. Configurar o banco no Supabase
 
-No painel do Supabase, abra **SQL Editor > New query**, cole cada arquivo e clique em **Run**.
+As migrações ficam em `supabase/migrations/` e são aplicadas pelo
+[Supabase CLI](https://supabase.com/docs/guides/cli), já instalado como
+dependência do projeto (`npx supabase`). Na primeira vez:
 
-**Banco novo** — rode nesta ordem:
+```bash
+npx supabase login                      # abre o navegador para autorizar
+npx supabase link --project-ref SEU-REF # SEU-REF é o trecho antes de .supabase.co na URL do projeto
+```
 
-1. `supabase-setup.sql` (tabelas, já com prazo, tags e sessões)
-2. `supabase-migration-4.sql` (arranjos do workspace)
-3. `supabase-migration-6.sql` (bucket `arquivos` e metadados dos arquivos)
-4. `supabase-migration-7.sql` (perfil, versão, cotas e restauração)
-5. `supabase-migration-8.sql` (limites do bucket e cota de vídeos)
+Depois, sempre que houver migração nova:
 
-**Banco já existente** — rode apenas as migrações que faltam, sempre em ordem
-numérica (2 → 8). Não rode uma migração antiga depois de uma mais nova: a 7
-redefine políticas criadas pela 3 e pela 6.
+```bash
+npm run db:status   # lista as migrações: aplicadas (Remote) e locais (Local)
+npm run db:push     # aplica só as que faltam, em ordem
+```
+
+Sem o CLI, dá para colar cada arquivo de `supabase/migrations/` no
+**SQL Editor** do Supabase, em ordem, mas aí o controle do que já rodou é manual.
 
 Em **Authentication > URL Configuration**, inclua a URL `/login` do seu domínio e
 do ambiente local nas URLs de redirecionamento (necessário para "Esqueci minha senha").
@@ -123,14 +128,9 @@ study-planner/
 ├── components/             # AppShell, TopicoDrawer, WorkspaceBlocos, BottomNav, ThemeToggle, Cronometro, LeitorArquivo, SeletorArquivos, SoltarArquivos
 │   └── blocos/             # blocos reutilizáveis: vídeo, livro, artigos, arquivos, notas, flashcards, quiz
 ├── lib/                    # supabase, gemini, youtube, books, artigos, arquivos, layout, prazo, cronograma, revisao
-├── supabase-setup.sql      # criação das tabelas
-├── supabase-migration-2.sql# migração (prazo)
-├── supabase-migration-3.sql# migração (sessões de estudo)
-├── supabase-migration-4.sql# migração (arranjo do workspace em blocos)
-├── supabase-migration-5.sql# migração (tags nos roteiros)
-├── supabase-migration-6.sql# migração (arquivos do usuário: bucket + metadados)
-├── supabase-migration-7.sql# migração (perfil, versão, cotas, restauração)
-├── supabase-migration-8.sql# migração (limites do bucket + cota de vídeos)
+├── supabase/
+│   ├── config.toml         # configuração do Supabase CLI
+│   └── migrations/         # migrações do banco, em ordem
 ├── .env.example            # modelo das variáveis
 └── .env.local              # suas chaves (NÃO vai pro Git)
 ```
