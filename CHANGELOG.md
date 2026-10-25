@@ -1,5 +1,12 @@
 # Histórico de mudanças
 
+## Respostas da IA com schema
+
+Os pedidos ao Gemini enviam o formato esperado (`responseSchema`): campos
+obrigatórios, nível do tópico entre os três válidos, 4 alternativas por pergunta
+e quantidade de itens. A IA passa a errar menos o formato, e menos gerações falham
+com "Quiz inválido" ou "Tópicos inválidos". Não exige migração.
+
 ## Migrações pelo Supabase CLI
 
 Os arquivos `supabase-setup.sql` e `supabase-migration-2.sql` … `-8.sql` foram

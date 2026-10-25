@@ -19,17 +19,46 @@ const MODELOS = MODELOS_ENV.length
       "gemini-flash-lite-latest",
     ];
 
+// Schema da resposta (subconjunto OpenAPI que o Gemini aceita): a IA é
+// obrigada a seguir o formato, e os validadores de models.ts conferem o resto.
+type Schema = Record<string, unknown>;
+const TEXTO: Schema = { type: "STRING" };
+const objeto = (properties: Record<string, Schema>): Schema => ({
+  type: "OBJECT",
+  properties,
+  required: Object.keys(properties),
+  propertyOrdering: Object.keys(properties),
+});
+const lista = (
+  items: Schema,
+  minItems?: number,
+  maxItems?: number,
+): Schema => ({
+  type: "ARRAY",
+  items,
+  ...(minItems !== undefined && { minItems }),
+  ...(maxItems !== undefined && { maxItems }),
+});
+const BUSCAS = {
+  buscaVideos: TEXTO,
+  buscaLivros: TEXTO,
+  buscaArtigos: TEXTO,
+};
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function chamarGemini(prompt: string): Promise<unknown> {
+async function chamarGemini(
+  prompt: string,
+  responseSchema: Schema,
+): Promise<unknown> {
   if (!GEMINI_KEY)
     throw new Error("GEMINI_API_KEY não configurada no .env.local");
 
   const corpo = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: "application/json" },
+    generationConfig: { responseMimeType: "application/json", responseSchema },
   });
 
   let ultimoErro = "Erro desconhecido";
@@ -127,15 +156,33 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 
 Crie entre 6 e 10 tópicos, do básico ao avançado, em ordem lógica de aprendizado.`;
 
-  return validarPlano(await chamarGemini(prompt));
+  const schema = objeto({
+    tema: TEXTO,
+    descricao: TEXTO,
+    topicos: lista(
+      objeto({
+        titulo: TEXTO,
+        nivel: {
+          type: "STRING",
+          enum: ["iniciante", "intermediario", "avancado"],
+        },
+        descricao: TEXTO,
+        duracaoEstimada: TEXTO,
+        ...BUSCAS,
+      }),
+      6,
+      10,
+    ),
+  });
+  return validarPlano(await chamarGemini(prompt, schema));
 }
 
 export async function gerarBuscas(titulos: string[]) {
-  const lista = titulos.map((t, i) => `${i + 1}. ${t}`).join("\n");
+  const numerados = titulos.map((t, i) => `${i + 1}. ${t}`).join("\n");
   const prompt = `Você é um professor. Para cada tópico abaixo, gere um termo curto de busca para YouTube (buscaVideos), o título de um livro conhecido sobre o tópico (buscaLivros) e um termo de busca em inglês para artigos científicos (buscaArtigos). Use inglês nos livros e artigos porque há mais acervo gratuito.
 
 Tópicos:
-${lista}
+${numerados}
 
 Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 {
@@ -146,7 +193,12 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 
 A lista "buscas" deve ter exatamente ${titulos.length} itens, na mesma ordem dos tópicos.`;
 
-  const { buscas } = (await chamarGemini(prompt)) as { buscas?: unknown };
+  const { buscas } = (await chamarGemini(
+    prompt,
+    objeto({
+      buscas: lista(objeto(BUSCAS), titulos.length, titulos.length),
+    }),
+  )) as { buscas?: unknown };
   if (
     !Array.isArray(buscas) ||
     buscas.length !== titulos.length ||
@@ -179,7 +231,12 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
   ]
 }`;
 
-  const resultado = (await chamarGemini(prompt)) as { flashcards?: unknown };
+  const resultado = (await chamarGemini(
+    prompt,
+    objeto({
+      flashcards: lista(objeto({ frente: TEXTO, verso: TEXTO }), 1, 30),
+    }),
+  )) as { flashcards?: unknown };
   return validarCards(resultado?.flashcards);
 }
 
@@ -203,6 +260,20 @@ Responda APENAS com um JSON válido, sem texto fora dele, no formato:
 
 O campo "correta" é o índice (0 a 3) da alternativa certa.`;
 
-  const resultado = (await chamarGemini(prompt)) as { perguntas?: unknown };
+  const resultado = (await chamarGemini(
+    prompt,
+    objeto({
+      perguntas: lista(
+        objeto({
+          pergunta: TEXTO,
+          opcoes: lista(TEXTO, 4, 4),
+          correta: { type: "INTEGER", minimum: 0, maximum: 3 },
+          explicacao: TEXTO,
+        }),
+        1,
+        20,
+      ),
+    }),
+  )) as { perguntas?: unknown };
   return validarQuiz(resultado?.perguntas);
 }

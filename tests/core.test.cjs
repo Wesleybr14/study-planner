@@ -372,3 +372,47 @@ test("http: buscas externas têm timeout e cache", async () => {
   assert.equal(opcoes.next.revalidate, 86400);
   assert.deepEqual(opcoes.headers, { a: "1" });
 });
+test("gemini: pedido leva o schema da resposta", async () => {
+  process.env.GEMINI_API_KEY = "teste";
+  delete require.cache[require.resolve("../lib/gemini.ts")];
+  const { gerarQuiz } = require("../lib/gemini.ts");
+  const fetchOriginal = global.fetch;
+  let pedidoGemini;
+  const pergunta = {
+    pergunta: "1/2 + 1/2?",
+    opcoes: ["0", "1", "2", "1/4"],
+    correta: 1,
+    explicacao: "Duas metades.",
+  };
+  global.fetch = async (_url, init) => {
+    pedidoGemini = JSON.parse(init.body);
+    return Response.json({
+      candidates: [
+        {
+          content: {
+            parts: [{ text: JSON.stringify({ perguntas: [pergunta] }) }],
+          },
+        },
+      ],
+    });
+  };
+  try {
+    assert.deepEqual(await gerarQuiz("Frações", ""), [pergunta]);
+  } finally {
+    global.fetch = fetchOriginal;
+    delete process.env.GEMINI_API_KEY;
+  }
+  const schema = pedidoGemini.generationConfig.responseSchema;
+  assert.equal(
+    pedidoGemini.generationConfig.responseMimeType,
+    "application/json",
+  );
+  assert.deepEqual(schema.required, ["perguntas"]);
+  const item = schema.properties.perguntas.items;
+  assert.deepEqual(item.properties.opcoes.minItems, 4);
+  assert.deepEqual(item.properties.correta, {
+    type: "INTEGER",
+    minimum: 0,
+    maximum: 3,
+  });
+});
