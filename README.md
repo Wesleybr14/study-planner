@@ -67,7 +67,8 @@ O `.env.example` também descreve as variáveis opcionais.
 
 As migrações ficam em `supabase/migrations/` e são aplicadas pelo
 [Supabase CLI](https://supabase.com/docs/guides/cli), já instalado como
-dependência do projeto (`npx supabase`). Na primeira vez:
+dependência do projeto (`npx supabase`). Rode os comandos **dentro da pasta do
+projeto**: o CLI procura `supabase/` no diretório atual. Na primeira vez:
 
 ```bash
 npx supabase login                      # abre o navegador para autorizar
