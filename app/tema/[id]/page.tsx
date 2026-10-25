@@ -1,5 +1,5 @@
 "use client";
-import { atualizarRoteiro } from "@/lib/roteiros";
+import { atualizarRoteiro, type SnapshotRoteiro } from "@/lib/roteiros";
 import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -7,29 +7,33 @@ import { useParams, useRouter } from "next/navigation";
 import {
   identificarTopicos,
   progresso as calcularProgresso,
+  type Topico,
 } from "@/lib/models";
+import { mensagemDe } from "@/lib/erro";
 import { supabase } from "@/lib/supabase";
 import { labelPrazo, corPrazo, formatarData } from "@/lib/prazo";
-import { calcularCronograma, formatarDataCurta } from "@/lib/cronograma";
+import {
+  calcularCronograma,
+  formatarDataCurta,
+  type Planejamento,
+} from "@/lib/cronograma";
 import PlanejamentoEditor from "@/components/PlanejamentoEditor";
 import AppShell from "@/components/AppShell";
 import SalaEstudo from "@/components/SalaEstudo";
 import WorkspaceBlocos from "@/components/WorkspaceBlocos";
 import { carregarArranjos, topicKey, type Arranjos } from "@/lib/layout";
 
-type Flashcard = { frente: string; verso: string };
-
-type Topico = {
+type Roteiro = {
   id: string;
-  titulo: string;
-  nivel: string;
+  tema: string;
   descricao: string;
-  duracaoEstimada: string;
-  buscaVideos: string;
-  buscaLivros: string;
-  buscaArtigos?: string;
-  nota?: string;
-  flashcards?: Flashcard[];
+  topicos: Topico[];
+  progresso?: number;
+  prazo?: string | null;
+  planejamento?: Planejamento;
+  tags?: string[];
+  versao?: number;
+  [campo: string]: unknown;
 };
 
 export default function TemaPage() {
@@ -38,9 +42,9 @@ export default function TemaPage() {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const fila = useRef(Promise.resolve());
-  const persistido = useRef<any>(null);
-  const roteiroRef = useRef<any>(null);
-  const [roteiro, setRoteiro] = useState<any>(null);
+  const persistido = useRef<SnapshotRoteiro | null>(null);
+  const roteiroRef = useRef<Roteiro | null>(null);
+  const [roteiro, setRoteiro] = useState<Roteiro | null>(null);
   const [concluidos, setConcluidos] = useState<boolean[]>([]);
   const [aberto, setAberto] = useState<number | null>(null);
   const [expandido, setExpandido] = useState(false);
@@ -94,6 +98,12 @@ export default function TemaPage() {
     return arranjos.salvos.find((s) => s.id === esc)?.nome ?? null;
   }
 
+  // As ações só existem com o roteiro na tela, mas o ref começa vazio.
+  function atual(): Roteiro {
+    if (!roteiroRef.current) throw new Error("Roteiro ainda não carregado.");
+    return roteiroRef.current;
+  }
+
   async function carregarArranjosDoUsuario() {
     setArranjos(await carregarArranjos());
   }
@@ -108,7 +118,8 @@ export default function TemaPage() {
       setErro(error?.message ?? "Roteiro não encontrado.");
       return;
     }
-    persistido.current = { ...data };
+    const original: SnapshotRoteiro = { ...data };
+    persistido.current = original;
     const originais = data.topicos;
     data.topicos = identificarTopicos(data.topicos);
     if (JSON.stringify(originais) !== JSON.stringify(data.topicos)) {
@@ -117,7 +128,7 @@ export default function TemaPage() {
           supabase,
           id,
           { topicos: data.topicos },
-          persistido.current,
+          original,
         );
         data.versao = persistido.current.versao;
       } catch {
@@ -137,7 +148,7 @@ export default function TemaPage() {
       const solicitado = query.has("topico")
         ? Number(query.get("topico"))
         : data.topicos.findIndex(
-            (t: any) => t.id === localStorage.getItem(`ultimo-topico:${id}`),
+            (t: Topico) => t.id === localStorage.getItem(`ultimo-topico:${id}`),
           );
       if (
         Number.isInteger(solicitado) &&
@@ -147,7 +158,7 @@ export default function TemaPage() {
         setAberto(solicitado);
       else if (data.topicos.length) setAberto(0);
     } catch {}
-    setConcluidos(data.topicos.map((t: any) => !!t.concluido));
+    setConcluidos(data.topicos.map((t: Topico) => !!t.concluido));
   }, [id, setAberto]);
 
   useEffect(() => {
@@ -158,6 +169,8 @@ export default function TemaPage() {
     const tarefa = fila.current
       .catch(() => {})
       .then(async () => {
+        if (!persistido.current)
+          throw new Error("Roteiro ainda não carregado.");
         persistido.current = await atualizarRoteiro(
           supabase,
           id,
@@ -169,8 +182,8 @@ export default function TemaPage() {
     return tarefa;
   }
 
-  async function salvarTopicos(topicos: any[]) {
-    const anterior = roteiroRef.current;
+  async function salvarTopicos(topicos: Topico[]) {
+    const anterior = atual();
     const novo = {
       ...anterior,
       topicos,
@@ -199,7 +212,7 @@ export default function TemaPage() {
   async function alternar(i: number) {
     try {
       await salvarTopicos(
-        roteiroRef.current.topicos.map((t: any, idx: number) =>
+        atual().topicos.map((t, idx) =>
           idx === i ? { ...t, concluido: !t.concluido } : t,
         ),
       );
@@ -207,21 +220,19 @@ export default function TemaPage() {
   }
 
   // Aplica alterações em um único tópico (usado pelo drawer).
-  async function salvarTopico(patch: Record<string, any>) {
+  async function salvarTopico(patch: Partial<Topico>) {
     if (aberto === null) return;
 
-    if ((patch as any)._duplicarApos) {
+    if (patch._duplicarApos) {
       const copia = {
-        ...(patch as any)._copia,
+        ...(patch._copia as Topico),
         id: crypto.randomUUID(),
         recursoIndex:
-          Math.max(
-            ...roteiroRef.current.topicos.map((t: any) => t.recursoIndex),
-          ) + 1,
+          Math.max(...atual().topicos.map((t) => t.recursoIndex)) + 1,
         concluido: false,
       };
       const idx = aberto;
-      const topicos = [...roteiroRef.current.topicos];
+      const topicos = [...atual().topicos];
       topicos.splice(idx + 1, 0, copia);
       await salvarTopicos(topicos);
       setAberto(idx + 1);
@@ -229,7 +240,7 @@ export default function TemaPage() {
       return;
     }
 
-    const topicos = roteiroRef.current.topicos.map((t: any, idx: number) =>
+    const topicos = atual().topicos.map((t, idx) =>
       idx === aberto ? { ...t, ...patch } : t,
     );
     await salvarTopicos(topicos);
@@ -247,7 +258,7 @@ export default function TemaPage() {
 
     setAtualizando(true);
     try {
-      const titulos = roteiro.topicos.map((t: any) => t.titulo);
+      const titulos = atual().topicos.map((t) => t.titulo);
       const res = await apiFetch("/api/refresh-searches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -256,36 +267,36 @@ export default function TemaPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro ?? "Erro ao atualizar buscas");
 
-      const topicos = roteiroRef.current.topicos.map((t: any, i: number) => ({
+      const topicos = atual().topicos.map((t, i) => ({
         ...t,
         buscaVideos: data.buscas[i]?.buscaVideos ?? t.buscaVideos,
         buscaLivros: data.buscas[i]?.buscaLivros ?? t.buscaLivros,
         buscaArtigos: data.buscas[i]?.buscaArtigos ?? t.buscaArtigos,
       }));
       await salvarTopicos(topicos);
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(mensagemDe(e, "Erro ao atualizar buscas"));
     } finally {
       setAtualizando(false);
     }
   }
 
-  async function mover(atual: number, destino: number) {
-    if (destino < 0 || destino >= roteiro.topicos.length) return;
-    const topicos = [...roteiroRef.current.topicos];
-    const [item] = topicos.splice(atual, 1);
+  async function mover(origem: number, destino: number) {
+    const anteriores = atual().topicos;
+    if (destino < 0 || destino >= anteriores.length) return;
+    const topicos = [...anteriores];
+    const [item] = topicos.splice(origem, 1);
     topicos.splice(destino, 0, item);
-    const selecionado =
-      aberto !== null ? roteiroRef.current.topicos[aberto]?.id : null;
+    const selecionado = aberto !== null ? anteriores[aberto]?.id : null;
     if (selecionado) setAberto(topicos.findIndex((t) => t.id === selecionado));
     await salvarTopicos(topicos);
   }
 
   async function salvarTags(tags: string[]) {
-    setRoteiro((r: any) => ({ ...r, tags }));
+    setRoteiro((r) => r && { ...r, tags });
     try {
       await gravar({ tags });
-      roteiroRef.current = { ...roteiroRef.current, tags };
+      roteiroRef.current = { ...atual(), tags };
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao salvar tags.");
     }
@@ -294,14 +305,13 @@ export default function TemaPage() {
   function adicionarTag() {
     const tag = window.prompt("Nova tag (sem #):")?.trim().replace(/^#/, "");
     if (!tag) return;
-    const atual = roteiro.tags ?? [];
-    if (atual.some((t: string) => t.toLowerCase() === tag.toLowerCase()))
-      return;
-    salvarTags([...atual, tag]);
+    const tags = roteiro?.tags ?? [];
+    if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    salvarTags([...tags, tag]);
   }
 
   function removerTag(tag: string) {
-    salvarTags((roteiro.tags ?? []).filter((t: string) => t !== tag));
+    salvarTags((roteiro?.tags ?? []).filter((t) => t !== tag));
   }
 
   if (!roteiro) {
@@ -341,7 +351,7 @@ export default function TemaPage() {
         planejamento={roteiro.planejamento}
         salvar={async (patch) => {
           await gravar(patch);
-          roteiroRef.current = { ...roteiroRef.current, ...patch };
+          roteiroRef.current = { ...atual(), ...patch };
           setRoteiro(roteiroRef.current);
         }}
       />
@@ -349,9 +359,7 @@ export default function TemaPage() {
         {erro || (salvando ? "Salvando…" : "")}
         {erro && (
           <button
-            onClick={() =>
-              salvarTopicos(roteiroRef.current.topicos).catch(() => {})
-            }
+            onClick={() => salvarTopicos(atual().topicos).catch(() => {})}
           >
             Tentar salvar novamente
           </button>
@@ -376,7 +384,7 @@ export default function TemaPage() {
           </p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {(roteiro.tags ?? []).map((t: string) => (
+          {(roteiro.tags ?? []).map((t) => (
             <span
               key={t}
               className="group inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -510,7 +518,7 @@ export default function TemaPage() {
 
         {/* Coluna principal: tópicos */}
         <div className="space-y-3 lg:col-span-2 lg:order-1">
-          {roteiro.topicos.map((t: Topico, i: number) => (
+          {roteiro.topicos.map((t, i) => (
             <div
               key={t.id}
               className={`rounded-xl bg-white shadow transition dark:border dark:bg-slate-900 ${
