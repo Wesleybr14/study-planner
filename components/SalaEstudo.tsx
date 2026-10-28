@@ -9,10 +9,11 @@ import ArquivosBloco from "./blocos/ArquivosBloco";
 import NotasBloco from "./blocos/NotasBloco";
 import FlashcardsBloco from "./blocos/FlashcardsBloco";
 import QuizBloco from "./blocos/QuizBloco";
+import MapaBloco from "./blocos/MapaBloco";
 import Cronometro from "./Cronometro";
 import type { Topico } from "@/lib/models";
 const MATERIAIS = ["Vídeos", "Livros", "Artigos", "Meus arquivos"];
-const CADERNO = ["Notas", "Flashcards", "Quiz"];
+const CADERNO = ["Notas", "Flashcards", "Quiz", "Mapa mental"];
 export default function SalaEstudo({
   roteiro,
   indice,
@@ -238,7 +239,9 @@ function Paineis({
             ? p.material
             : 0;
         c =
-          Number.isInteger(p.caderno) && p.caderno >= 0 && p.caderno < 3
+          Number.isInteger(p.caderno) &&
+          p.caderno >= 0 &&
+          p.caderno < CADERNO.length
             ? p.caderno
             : 0;
       }
@@ -373,6 +376,11 @@ function Paineis({
             {praticas.includes(2) && (
               <div hidden={caderno !== 2}>
                 <QuizBloco topico={topico} onSalvarTopico={onSalvarTopico} />
+              </div>
+            )}
+            {praticas.includes(3) && (
+              <div hidden={caderno !== 3}>
+                <MapaBloco topico={topico} onSalvarTopico={onSalvarTopico} />
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 // Modelo do "workspace em blocos": uma grade de 12 colunas onde cada bloco
-// (vídeo, livro, artigos, notas, flashcards, quiz) pode ser movido e
+// (vídeo, livro, artigos, notas, flashcards, quiz, mapa) pode ser movido e
 // redimensionado pelo usuário.
 //
 // Arranjos: além do layout padrão, o usuário pode salvar arranjos nomeados
@@ -9,7 +9,14 @@
 import { supabase } from "@/lib/supabase";
 
 export type TipoBloco =
-  "video" | "livro" | "artigos" | "arquivos" | "notas" | "flashcards" | "quiz";
+  | "video"
+  | "livro"
+  | "artigos"
+  | "arquivos"
+  | "notas"
+  | "flashcards"
+  | "quiz"
+  | "mapa";
 
 export type Bloco = {
   id: TipoBloco;
@@ -44,6 +51,7 @@ export const TIPOS: Record<TipoBloco, { rotulo: string; icone: string }> = {
   notas: { rotulo: "Notas", icone: "📝" },
   flashcards: { rotulo: "Flashcards", icone: "🃏" },
   quiz: { rotulo: "Quiz", icone: "❓" },
+  mapa: { rotulo: "Mapa mental", icone: "🧠" },
 };
 
 export const TIPOS_ORDEM: TipoBloco[] = [
@@ -54,6 +62,7 @@ export const TIPOS_ORDEM: TipoBloco[] = [
   "notas",
   "flashcards",
   "quiz",
+  "mapa",
 ];
 
 const clamp = (v: number, min: number, max: number) =>
@@ -63,7 +72,8 @@ const num = (v: unknown, def: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.round(v) : def;
 
 // Layout inicial: vídeo com livro na primeira faixa, quiz/notas/artigos na
-// segunda e flashcards/meus arquivos na última — uma grade cheia, sem buracos.
+// segunda, flashcards/meus arquivos na terceira e o mapa mental, que pede
+// largura, ocupando a última faixa inteira — uma grade cheia, sem buracos.
 export const LAYOUT_PADRAO: Layout = [
   { id: "video", x: 0, y: 0, w: 8, h: 9 },
   { id: "livro", x: 8, y: 0, w: 4, h: 9 },
@@ -72,6 +82,7 @@ export const LAYOUT_PADRAO: Layout = [
   { id: "artigos", x: 8, y: 9, w: 4, h: 5 },
   { id: "flashcards", x: 0, y: 14, w: 6, h: 4 },
   { id: "arquivos", x: 6, y: 14, w: 6, h: 4 },
+  { id: "mapa", x: 0, y: 18, w: 12, h: 8 },
 ];
 
 // Arranjos prontos (não entram na biblioteca do usuário).
@@ -90,6 +101,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "flashcards", x: 0, y: 12, w: 6, h: 5 },
       { id: "quiz", x: 6, y: 12, w: 6, h: 5 },
       { id: "arquivos", x: 0, y: 17, w: 12, h: 4 },
+      { id: "mapa", x: 0, y: 21, w: 12, h: 8 },
     ],
   },
   {
@@ -102,6 +114,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "quiz", x: 6, y: 15, w: 6, h: 6 },
       { id: "flashcards", x: 0, y: 21, w: 12, h: 4 },
       { id: "arquivos", x: 0, y: 25, w: 12, h: 4 },
+      { id: "mapa", x: 0, y: 29, w: 12, h: 8 },
     ],
   },
   {
@@ -114,6 +127,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "quiz", x: 7, y: 14, w: 5, h: 6 },
       { id: "flashcards", x: 0, y: 20, w: 12, h: 4 },
       { id: "arquivos", x: 0, y: 24, w: 12, h: 4 },
+      { id: "mapa", x: 0, y: 28, w: 12, h: 8 },
     ],
   },
   {
@@ -126,6 +140,7 @@ export const PRESETS: { nome: string; layout: Layout }[] = [
       { id: "flashcards", x: 0, y: 24, w: 12, h: 4 },
       { id: "quiz", x: 0, y: 28, w: 12, h: 5 },
       { id: "arquivos", x: 0, y: 33, w: 12, h: 4 },
+      { id: "mapa", x: 0, y: 37, w: 12, h: 8 },
     ],
   },
 ];

@@ -1,5 +1,12 @@
 # Histórico de mudanças
 
+## Mapas mentais
+
+- **Mapa mental por tópico**: um bloco novo no workspace e uma aba nova no caderno da sala de estudo. A IA gera de 3 a 6 ramos com ideias-chave (usa 1 da cota "ia"), e dá para adicionar, renomear, apagar, recolher e desfazer. No **modo revisão**, os rótulos ficam escondidos até você clicar.
+- **Mapa do roteiro**: a página do roteiro ganhou a alternância **Lista | Mapa**. O mapa agrupa os tópicos por nível, pinta os concluídos de verde e abre a sala de estudo com um clique. A escolha fica guardada no aparelho.
+
+O mapa é salvo dentro do próprio tópico (`topico.mapa`) e entra no backup. Não exige migração. Arranjos de workspace já salvos ganham o bloco novo no fim da grade.
+
 ## Respostas da IA com schema
 
 Os pedidos ao Gemini enviam o formato esperado (`responseSchema`): campos

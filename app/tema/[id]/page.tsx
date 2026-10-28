@@ -21,6 +21,7 @@ import PlanejamentoEditor from "@/components/PlanejamentoEditor";
 import AppShell from "@/components/AppShell";
 import SalaEstudo from "@/components/SalaEstudo";
 import WorkspaceBlocos from "@/components/WorkspaceBlocos";
+import MapaRoteiro from "@/components/MapaRoteiro";
 import { carregarArranjos, topicKey, type Arranjos } from "@/lib/layout";
 
 type Roteiro = {
@@ -51,6 +52,20 @@ export default function TemaPage() {
   const [verCronograma, setVerCronograma] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
   const [arranjos, setArranjos] = useState<Arranjos | null>(null);
+  const [visao, setVisao] = useState<"lista" | "mapa">("lista");
+
+  // Lista ou mapa: preferência guardada neste aparelho, lida depois da montagem.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("visao-roteiro") === "mapa") setVisao("mapa");
+    } catch {}
+  }, []);
+  function mudarVisao(v: "lista" | "mapa") {
+    setVisao(v);
+    try {
+      localStorage.setItem("visao-roteiro", v);
+    } catch {}
+  }
 
   useEffect(() => {
     if (aberto !== null && roteiro?.topicos[aberto]?.id)
@@ -518,107 +533,143 @@ export default function TemaPage() {
 
         {/* Coluna principal: tópicos */}
         <div className="space-y-3 lg:col-span-2 lg:order-1">
-          {roteiro.topicos.map((t, i) => (
+          <div className="flex justify-end">
             <div
-              key={t.id}
-              className={`rounded-xl bg-white shadow transition dark:border dark:bg-slate-900 ${
-                aberto === i
-                  ? "ring-2 ring-blue-500 dark:border-blue-500"
-                  : "dark:border-slate-800"
-              }`}
+              role="group"
+              aria-label="Exibir tópicos como"
+              className="inline-flex overflow-hidden rounded-lg border border-slate-300 text-sm dark:border-slate-700"
             >
-              <div className="flex items-start gap-3 p-4">
-                <input
-                  type="checkbox"
-                  aria-label={`Concluir ${t.titulo}`}
-                  checked={concluidos[i]}
-                  onChange={() => alternar(i)}
-                  className="mt-1 h-5 w-5 cursor-pointer accent-green-500"
-                />
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Abrir ${t.titulo}`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+              {(["lista", "mapa"] as const).map((v) => (
+                <button
+                  key={v}
+                  aria-pressed={visao === v}
+                  onClick={() => mudarVisao(v)}
+                  className={`px-3 py-1 ${
+                    visao === v
+                      ? "bg-blue-100 font-medium text-blue-800 dark:bg-blue-900/50 dark:text-blue-200"
+                      : "bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {v === "lista" ? "Lista" : "Mapa"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {visao === "mapa" ? (
+            <MapaRoteiro
+              tema={roteiro.tema}
+              topicos={roteiro.topicos}
+              concluidos={concluidos}
+              aberto={aberto}
+              progresso={progresso}
+              onAbrir={(i) => {
+                setExpandido(false);
+                setAberto(i);
+              }}
+            />
+          ) : (
+            roteiro.topicos.map((t, i) => (
+              <div
+                key={t.id}
+                className={`rounded-xl bg-white shadow transition dark:border dark:bg-slate-900 ${
+                  aberto === i
+                    ? "ring-2 ring-blue-500 dark:border-blue-500"
+                    : "dark:border-slate-800"
+                }`}
+              >
+                <div className="flex items-start gap-3 p-4">
+                  <input
+                    type="checkbox"
+                    aria-label={`Concluir ${t.titulo}`}
+                    checked={concluidos[i]}
+                    onChange={() => alternar(i)}
+                    className="mt-1 h-5 w-5 cursor-pointer accent-green-500"
+                  />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Abrir ${t.titulo}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setExpandido(false);
+                        setAberto(i);
+                      }
+                    }}
+                    className="flex-1 cursor-pointer"
+                    onClick={() => {
                       setExpandido(false);
                       setAberto(i);
-                    }
-                  }}
-                  className="flex-1 cursor-pointer"
-                  onClick={() => {
-                    setExpandido(false);
-                    setAberto(i);
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-semibold ${
-                        concluidos[i]
-                          ? "text-slate-400 line-through dark:text-slate-500"
-                          : ""
-                      }`}
-                    >
-                      {i + 1}. {t.titulo}
-                    </span>
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                      {t.nivel}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {t.descricao}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                    ⏱ {t.duracaoEstimada}
-                    {t.nota ? " · 📝 com anotação" : ""}
-                    {t.flashcards?.length
-                      ? ` · 🃏 ${t.flashcards.length} flashcards`
-                      : ""}
-                    {temArranjoProprio(i) && (
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
                       <span
-                        title={`Arranjo do workspace: ${
-                          nomeArranjo(i) ?? "personalizado"
+                        className={`font-semibold ${
+                          concluidos[i]
+                            ? "text-slate-400 line-through dark:text-slate-500"
+                            : ""
                         }`}
-                        className="ml-1 inline-block rounded-full bg-violet-100 px-1.5 py-px text-violet-700 dark:bg-violet-900/50 dark:text-violet-300"
                       >
-                        🧩 {nomeArranjo(i) ?? "arranjo próprio"}
+                        {i + 1}. {t.titulo}
                       </span>
-                    )}
-                    <span className="ml-1 text-blue-500 dark:text-blue-400">
-                      · abrir →
-                    </span>
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1 self-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      mover(i, i - 1).catch(() => {});
-                    }}
-                    disabled={i === 0}
-                    title="Mover para cima"
-                    className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      mover(i, i + 1).catch(() => {});
-                    }}
-                    disabled={i === roteiro.topicos.length - 1}
-                    title="Mover para baixo"
-                    className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                  >
-                    ↓
-                  </button>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                        {t.nivel}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {t.descricao}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                      ⏱ {t.duracaoEstimada}
+                      {t.nota ? " · 📝 com anotação" : ""}
+                      {t.flashcards?.length
+                        ? ` · 🃏 ${t.flashcards.length} flashcards`
+                        : ""}
+                      {temArranjoProprio(i) && (
+                        <span
+                          title={`Arranjo do workspace: ${
+                            nomeArranjo(i) ?? "personalizado"
+                          }`}
+                          className="ml-1 inline-block rounded-full bg-violet-100 px-1.5 py-px text-violet-700 dark:bg-violet-900/50 dark:text-violet-300"
+                        >
+                          🧩 {nomeArranjo(i) ?? "arranjo próprio"}
+                        </span>
+                      )}
+                      <span className="ml-1 text-blue-500 dark:text-blue-400">
+                        · abrir →
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 self-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        mover(i, i - 1).catch(() => {});
+                      }}
+                      disabled={i === 0}
+                      title="Mover para cima"
+                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        mover(i, i + 1).catch(() => {});
+                      }}
+                      disabled={i === roteiro.topicos.length - 1}
+                      title="Mover para baixo"
+                      className="rounded px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                    >
+                      ↓
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

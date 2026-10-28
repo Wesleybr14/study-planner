@@ -1,4 +1,5 @@
 import { validarPlano, validarQuiz, validarCards } from "./models";
+import { mapaDaIA, validarMapa, MAX_TEXTO_NO } from "./mapa";
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 // Modelos em ordem de preferência. Se um estiver sobrecarregado/indisponível,
@@ -276,4 +277,32 @@ O campo "correta" é o índice (0 a 3) da alternativa certa.`;
     }),
   )) as { perguntas?: unknown };
   return validarQuiz(resultado?.perguntas);
+}
+
+export async function gerarMapa(titulo: string, descricao: string) {
+  const prompt = `Você é um professor. Monte um mapa mental de revisão sobre o tópico "${titulo}".
+Contexto do tópico: ${descricao}
+
+Divida o tópico em 3 a 6 ramos (os grandes eixos do assunto) e dê a cada ramo de 2 a 5 ideias-chave.
+Cada ramo e cada ideia deve ter no máximo 6 palavras: é um rótulo de mapa, não uma frase completa.`;
+
+  const resultado = (await chamarGemini(
+    prompt,
+    objeto({
+      ramos: lista(objeto({ texto: TEXTO, ideias: lista(TEXTO, 2, 5) }), 3, 6),
+    }),
+  )) as { ramos?: unknown };
+  const ramos = Array.isArray(resultado?.ramos) ? resultado.ramos : [];
+  if (!ramos.length) throw new Error("Mapa mental inválido.");
+  const corte = (t: unknown) =>
+    typeof t === "string" ? t.trim().slice(0, MAX_TEXTO_NO) : "";
+  return validarMapa(
+    mapaDaIA(
+      corte(titulo),
+      ramos.map((r: { texto?: unknown; ideias?: unknown }) => ({
+        texto: corte(r?.texto),
+        ideias: Array.isArray(r?.ideias) ? r.ideias.map(corte) : [],
+      })),
+    ),
+  );
 }

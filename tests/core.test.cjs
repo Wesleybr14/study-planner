@@ -416,3 +416,89 @@ test("gemini: pedido leva o schema da resposta", async () => {
     maximum: 3,
   });
 });
+test("mapa: valida, edita sem mutar e posiciona pais no meio dos filhos", () => {
+  const m = require("../lib/mapa.ts");
+  assert.throws(() => m.validarMapa({ texto: "" }), /vazio/);
+  assert.throws(() => m.validarMapa(null), /inválido/);
+  const raiz = m.validarMapa({
+    id: "r",
+    texto: " Frações ",
+    filhos: [
+      { id: "a", texto: "Conceito", filhos: [{ texto: "Numerador" }] },
+      { id: "a", texto: "Operações", lixo: 1 },
+    ],
+  });
+  assert.equal(raiz.texto, "Frações");
+  assert.notEqual(raiz.filhos[1].id, "a"); // id repetido ganha outro
+  assert.equal(raiz.filhos[1].lixo, undefined);
+  assert.equal(m.contarNos(raiz), 4);
+  const novo = m.adicionarFilho(raiz, "a", m.novoNo("Denominador"));
+  assert.equal(m.contarNos(raiz), 4);
+  assert.equal(m.contarNos(novo), 5);
+  assert.equal(m.renomearNo(novo, "a", "  ").filhos[0].texto, "Conceito");
+  assert.equal(m.removerNo(novo, "a").filhos.length, 1);
+  assert.equal(m.acharPai(novo, raiz.filhos[0].filhos[0].id).id, "a");
+  const recolhido = m.alternarRecolhido(novo, "a");
+  const { nos, altura } = m.posicionar(recolhido, () => 50);
+  assert.equal(nos.length, 3); // filhos de "a" escondidos
+  assert.equal(altura, 2 * m.LINHA_NO);
+  const [r, a, b] = nos;
+  assert.equal(r.y, (a.y + b.y) / 2);
+  assert.ok(a.x > r.x + r.w);
+  const longo = m.posicionar({ id: "x", texto: "x", filhos: [] }, () => 9999);
+  assert.equal(longo.nos[0].w, m.LARGURA_MAX_NO);
+});
+test("layout: mapa mental entra no padrão, nos arranjos prontos e em layouts antigos", () => {
+  const {
+    LAYOUT_PADRAO,
+    PRESETS,
+    normalizarLayout,
+    TIPOS_ORDEM,
+    colide,
+  } = require("../lib/layout.ts");
+  for (const l of [LAYOUT_PADRAO, ...PRESETS.map((p) => p.layout)]) {
+    assert.deepEqual(l.map((b) => b.id).sort(), [...TIPOS_ORDEM].sort());
+    for (let i = 0; i < l.length; i++)
+      for (let j = i + 1; j < l.length; j++) assert.ok(!colide(l[i], l[j]));
+  }
+  const antigo = LAYOUT_PADRAO.filter((b) => b.id !== "mapa");
+  const atualizado = normalizarLayout(antigo);
+  assert.deepEqual(atualizado.slice(0, antigo.length), antigo);
+  assert.equal(atualizado.at(-1).id, "mapa");
+});
+test("gemini: mapa mental vem com schema e vira árvore validada", async () => {
+  process.env.GEMINI_API_KEY = "teste";
+  delete require.cache[require.resolve("../lib/gemini.ts")];
+  const { gerarMapa } = require("../lib/gemini.ts");
+  const fetchOriginal = global.fetch;
+  let pedidoGemini;
+  const ramos = [
+    { texto: "Conceito", ideias: ["Numerador", "Denominador"] },
+    { texto: "Operações", ideias: ["Soma", "Produto"] },
+    { texto: "Usos", ideias: ["Receitas", "Medidas"] },
+  ];
+  global.fetch = async (_url, init) => {
+    pedidoGemini = JSON.parse(init.body);
+    return Response.json({
+      candidates: [
+        { content: { parts: [{ text: JSON.stringify({ ramos }) }] } },
+      ],
+    });
+  };
+  let mapa;
+  try {
+    mapa = await gerarMapa("Frações", "");
+  } finally {
+    global.fetch = fetchOriginal;
+    delete process.env.GEMINI_API_KEY;
+  }
+  const schema = pedidoGemini.generationConfig.responseSchema;
+  assert.equal(schema.properties.ramos.minItems, 3);
+  assert.equal(schema.properties.ramos.items.properties.ideias.maxItems, 5);
+  assert.equal(mapa.texto, "Frações");
+  assert.deepEqual(
+    mapa.filhos.map((f) => [f.texto, f.filhos.map((i) => i.texto)]),
+    ramos.map((r) => [r.texto, r.ideias]),
+  );
+  assert.ok(mapa.filhos.every((f) => typeof f.id === "string"));
+});

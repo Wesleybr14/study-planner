@@ -1,3 +1,4 @@
+import type { NoMapa } from "./mapa";
 export type Pergunta = {
   pergunta: string;
   opcoes: string[];
@@ -26,6 +27,7 @@ export type Topico = {
   quiz?: Pergunta[];
   flashcards?: Flashcard[];
   tentativas?: Tentativa[];
+  mapa?: NoMapa;
   [key: string]: unknown;
 };
 export function identificarTopicos<T extends Record<string, unknown>>(

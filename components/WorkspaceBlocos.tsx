@@ -31,6 +31,7 @@ import ArquivosBloco from "./blocos/ArquivosBloco";
 import NotasBloco from "./blocos/NotasBloco";
 import FlashcardsBloco from "./blocos/FlashcardsBloco";
 import QuizBloco from "./blocos/QuizBloco";
+import MapaBloco from "./blocos/MapaBloco";
 import ThemeToggle from "./ThemeToggle";
 import type { Topico } from "@/lib/models";
 const ICONES: Record<TipoBloco, IconName> = {
@@ -41,6 +42,7 @@ const ICONES: Record<TipoBloco, IconName> = {
   notas: "keyboard",
   flashcards: "repeat",
   quiz: "spark",
+  mapa: "leaf",
 };
 type Direcao = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 const DIRECOES: Direcao[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
@@ -443,6 +445,8 @@ export default function WorkspaceBlocos({
         );
       case "quiz":
         return <QuizBloco topico={topico} onSalvarTopico={onSalvarTopico} />;
+      case "mapa":
+        return <MapaBloco topico={topico} onSalvarTopico={onSalvarTopico} />;
     }
   }
   const exibido = preview ?? layout;
