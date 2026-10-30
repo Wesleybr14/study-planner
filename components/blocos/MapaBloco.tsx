@@ -12,11 +12,12 @@ import {
   novoNo,
   removerNo,
   renomearNo,
+  validarMapa,
   type NoMapa,
 } from "@/lib/mapa";
 import MapaArvore from "../MapaArvore";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const BOTAO =
   "rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700";
@@ -29,7 +30,17 @@ export default function MapaBloco({
   topico: Topico;
   onSalvarTopico: (patch: Partial<Topico>) => void | Promise<void>;
 }) {
-  const mapa = topico.mapa;
+  // O mapa salvo passa pela validação: um backup antigo ou editado à mão não
+  // pode derrubar a sala de estudo.
+  const { mapa, corrompido } = useMemo(() => {
+    if (topico.mapa === undefined)
+      return { mapa: undefined, corrompido: false };
+    try {
+      return { mapa: validarMapa(topico.mapa), corrompido: false };
+    } catch {
+      return { mapa: undefined, corrompido: true };
+    }
+  }, [topico.mapa]);
   const [gerando, setGerando] = useState(false);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [nome, setNome] = useState<string | null>(null);
@@ -116,8 +127,9 @@ export default function MapaBloco({
       {!mapa ? (
         <div className="text-sm text-slate-400 dark:text-slate-500">
           <p>
-            Nenhum mapa ainda. A IA divide o tópico nos grandes eixos e nas
-            ideias-chave de cada um, e você ajusta como quiser.
+            {corrompido
+              ? "Não foi possível ler o mapa salvo deste tópico. Gere um novo ou comece um em branco."
+              : "Nenhum mapa ainda. A IA divide o tópico nos grandes eixos e nas ideias-chave de cada um, e você ajusta como quiser."}
           </p>
           <button
             onClick={() => salvar(novoNo(topico.titulo.slice(0, MAX_TEXTO_NO)))}
